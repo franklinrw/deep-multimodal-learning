@@ -100,7 +100,7 @@ def main():
                 
                 for i in range(len(sensornames)):
                     sensor = sensornames[i]
-                    path = 'C:/Users/kaskn/Thesis Project/action_recognition_dataset/' + objectname + '/' + toolname + '/' + action + '/' + sensor + '/'
+                    path = 'C:/Users/Frank/OneDrive/Bureaublad/action_recognition_dataset/' + objectname + '/' + toolname + '/' + action + '/' + sensor + '/'
 
                     # Loop through the number of repeats
                     for j in range(10):
