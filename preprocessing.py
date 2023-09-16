@@ -189,24 +189,24 @@ def main():
     print(y_training.shape, y_validation.shape, y_testing.shape)
     
     # Save io matrices
-    pickle.dump(training_color, open('E:/training_color.pkl', 'wb'))
-    pickle.dump(training_icub_right, open('E:/training_icub_right.pkl', 'wb'))
-    pickle.dump(training_icub_left, open('E:/training_icub_left.pkl', 'wb'))
-    pickle.dump(training_depth, open('E:/training_depth.pkl', 'wb'))
+    pickle.dump(training_color, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/training_color.pkl', 'wb'))
+    pickle.dump(training_icub_right, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/training_icub_right.pkl', 'wb'))
+    pickle.dump(training_icub_left, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/training_icub_left.pkl', 'wb'))
+    pickle.dump(training_depth, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/training_depth.pkl', 'wb'))
 
-    pickle.dump(validation_color, open('E:/validation_color.pkl', 'wb'))
-    pickle.dump(validation_icub_right, open('E:/validation_icub_right.pkl', 'wb'))
-    pickle.dump(validation_icub_left, open('E:/validation_icub_left.pkl', 'wb'))
-    pickle.dump(validation_depth, open('E:/validation_depth.pkl', 'wb'))
+    pickle.dump(validation_color, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/validation_color.pkl', 'wb'))
+    pickle.dump(validation_icub_right, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/validation_icub_right.pkl', 'wb'))
+    pickle.dump(validation_icub_left, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/validation_icub_left.pkl', 'wb'))
+    pickle.dump(validation_depth, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/validation_depth.pkl', 'wb'))
 
-    pickle.dump(testing_color, open('E:/testing_color.pkl', 'wb'))
-    pickle.dump(testing_icub_right, open('E:/testing_icub_right.pkl', 'wb'))
-    pickle.dump(testing_icub_left, open('E:/testing_icub_left.pkl', 'wb'))
-    pickle.dump(testing_depth, open('E:/testing_depth.pkl', 'wb'))
+    pickle.dump(testing_color, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/testing_color.pkl', 'wb'))
+    pickle.dump(testing_icub_right, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/testing_icub_right.pkl', 'wb'))
+    pickle.dump(testing_icub_left, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/testing_icub_left.pkl', 'wb'))
+    pickle.dump(testing_depth, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/testing_depth.pkl', 'wb'))
 
-    pickle.dump(y_training, open('E:/y_training.pkl', 'wb'))
-    pickle.dump(y_validation, open('E:/y_validation.pkl', 'wb'))
-    pickle.dump(y_testing, open('E:/y_testing.pkl', 'wb'))
+    pickle.dump(y_training, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/y_training.pkl', 'wb'))
+    pickle.dump(y_validation, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/y_validation.pkl', 'wb'))
+    pickle.dump(y_testing, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/y_testing.pkl', 'wb'))
 
 if __name__ == '__main__':
     main()
