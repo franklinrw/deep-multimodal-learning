@@ -2,3 +2,4 @@
 /mvae
 /data
 /__pycache__
+*.code-workspace
