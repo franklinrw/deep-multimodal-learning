@@ -1,2 +1,1 @@
-# iCub-HRI-MVAE
-Test
+# Deep Multimodal Learning
