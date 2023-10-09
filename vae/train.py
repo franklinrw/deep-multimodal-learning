@@ -2,7 +2,7 @@ import torch
 import torchvision.datasets as datasets
 from tqdm import tqdm
 from torch import nn, optim
-from vae import VariationalAutoEncoder
+from vae.vae import VariationalAutoEncoder
 from torchvision import transforms
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
