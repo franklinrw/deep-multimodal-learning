@@ -4,14 +4,30 @@ from torch import nn, optim
 from torchvision.utils import save_image
     
 ##### Train functions
-def train_ae(model, dataloader, num_epochs=5, learning_rate=1e-3, input_dim=24576, device="cpu"):
+# def train_ae(model, dataloader, num_epochs=5, learning_rate=1e-3, input_dim=24576, device="cpu"):
+#     loss_fn = nn.MSELoss(reduction="sum")
+#     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    
+#     for epoch in range(num_epochs):
+#         loop = tqdm(enumerate(dataloader))
+#         for i, (x, _) in loop:
+#             x = x.to(device).view(x.shape[0], input_dim)
+#             x_reconstructed = model(x)
+#             loss = loss_fn(x_reconstructed, x)
+            
+#             optimizer.zero_grad()
+#             loss.backward()
+#             optimizer.step()
+#             loop.set_postfix(loss=loss.item())
+
+def train_cae(model, dataloader, num_epochs=5, learning_rate=1e-3, device="cpu"):
     loss_fn = nn.MSELoss(reduction="sum")
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     
     for epoch in range(num_epochs):
         loop = tqdm(enumerate(dataloader))
         for i, (x, _) in loop:
-            x = x.to(device).view(x.shape[0], input_dim)
+            x = x.to(device)  # No need to reshape the input
             x_reconstructed = model(x)
             loss = loss_fn(x_reconstructed, x)
             
