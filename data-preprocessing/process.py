@@ -1,12 +1,9 @@
 import numpy as np
 import cv2
-from PIL import Image
-import matplotlib.pyplot as plt
 import pickle
-from keras.utils import to_categorical
+from functions import concatenate, normalize, resize, bgr_to_rgb, image_from_array, flatten, to_float
 
 ### FOLDER LABELS ###
-
 sensornames = ['color', 'depthcolormap', 'icub_left', 'icub_right']
 toolnames = ['hook', 'ruler', 'spatula', 'sshot']
 actions = ['left_to_right', 'pull', 'push', 'right_to_left']
@@ -15,69 +12,35 @@ objectnames = ['0_woodenCube', '1_pearToy', '2_yogurtYellowbottle', '3_cowToy', 
                '10_tomatoCan', '11_boxMilk', '12_containerNuts', '13_cornCob', '14_yellowFruitToy',
                '15_bottleNailPolisher', '16_boxRealSense', '17_clampOrange', '18_greenRectangleToy', '19_ketchupToy']
 
-### FUNCTIONS ###
-def concatenate(image_1, image_2):
-    # Concatenate the image
-    return np.concatenate((image_1, image_2), axis=1)
-
-def normalize(image):
-    # Normalize the image
-    return image/255
-
-def resize(image, width, height):
-    # Resize an image to a fixed size
-    return cv2.resize(image, (width, height))
-
-def bgr_to_rgb(image):
-    # Changes the images from BGR to RGB
-    return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-def image_from_array(image):
-    # Changes the array to image
-    return Image.fromarray(image)
-
-def flatten(image, width, height):
-    # Flatten the images
-    return image.flatten().reshape(1, width*height*3)
-
-def to_float(image):
-    # Convert to float32
-    return image.astype(np.float32)
-
-
 def main():
-    width, height = 64, 64
+    width, height = 256, 192
 
-    # Color images
-    #color_channels = 3
-    inp_size_color = width*height*3*2  # (64*64*3*2 = 24576)
+    # This is size of the processed image not the raw
+    size_image = (height, width*2, 3)
 
-    # Training color images
-    training_color = np.zeros((1, inp_size_color), dtype=np.float32)
-    training_icub_left = np.zeros((1, inp_size_color), dtype=np.float32)
-    training_icub_right = np.zeros((1, inp_size_color), dtype=np.float32)
+    # Training
+    training_color = np.zeros((1, *size_image), dtype=np.float32)
+    training_icub_left = np.zeros((1, *size_image), dtype=np.float32)
+    training_icub_right = np.zeros((1, *size_image), dtype=np.float32)
 
-    # Validation color images
-    validation_color = np.zeros((1, inp_size_color), dtype=np.float32)
-    validation_icub_left = np.zeros((1, inp_size_color), dtype=np.float32)
-    validation_icub_right = np.zeros((1, inp_size_color), dtype=np.float32)
+    # Validation
+    validation_color = np.zeros((1, *size_image), dtype=np.float32)
+    validation_icub_left = np.zeros((1, *size_image), dtype=np.float32)
+    validation_icub_right = np.zeros((1, *size_image), dtype=np.float32)
 
-    # Test color images
-    testing_color = np.zeros((1, inp_size_color), dtype=np.float32)
-    testing_icub_left = np.zeros((1, inp_size_color), dtype=np.float32)
-    testing_icub_right = np.zeros((1, inp_size_color), dtype=np.float32)
-
-    #Depth images
-    inp_size_depth = width*height*3*2  # (64*64*3*2 = 24576)
+    # Test
+    testing_color = np.zeros((1, *size_image), dtype=np.float32)
+    testing_icub_left = np.zeros((1, *size_image), dtype=np.float32)
+    testing_icub_right = np.zeros((1, *size_image), dtype=np.float32)
 
     # Training depth images
-    training_depth = np.zeros((1, inp_size_depth), dtype=np.float32)
+    training_depth = np.zeros((1, *size_image), dtype=np.float32)
 
     # Validation depth images
-    validation_depth = np.zeros((1, inp_size_depth), dtype=np.float32)
+    validation_depth = np.zeros((1, *size_image), dtype=np.float32)
 
     # Test depth images
-    testing_depth = np.zeros((1, inp_size_depth), dtype=np.float32)
+    testing_depth = np.zeros((1, *size_image), dtype=np.float32)
 
     # Checking shapes
     print("Training shapes:", training_color.shape, training_icub_left.shape, training_icub_right.shape, training_depth.shape)
@@ -118,10 +81,8 @@ def main():
                         effect = bgr_to_rgb(effect)
                         init = normalize(init)
                         effect = normalize(effect)
-                        init = flatten(init, width, height)
-                        effect = flatten(effect, width, height)
-                        init = to_float(init)
-                        effect = to_float(effect)
+                        # init = flatten(init, width, height)
+                        # effect = flatten(effect, width, height)
                         image = concatenate(init, effect)
 
                         if j in training_ids:
@@ -189,24 +150,24 @@ def main():
     print(y_training.shape, y_validation.shape, y_testing.shape)
     
     # Save io matrices
-    pickle.dump(training_color, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/training_color.pkl', 'wb'))
-    pickle.dump(training_icub_right, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/training_icub_right.pkl', 'wb'))
-    pickle.dump(training_icub_left, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/training_icub_left.pkl', 'wb'))
-    pickle.dump(training_depth, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/training_depth.pkl', 'wb'))
+    pickle.dump(training_color, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/training_color.pkl', 'wb'))
+    pickle.dump(training_icub_right, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/training_icub_right.pkl', 'wb'))
+    pickle.dump(training_icub_left, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/training_icub_left.pkl', 'wb'))
+    pickle.dump(training_depth, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/training_depth.pkl', 'wb'))
 
-    pickle.dump(validation_color, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/validation_color.pkl', 'wb'))
-    pickle.dump(validation_icub_right, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/validation_icub_right.pkl', 'wb'))
-    pickle.dump(validation_icub_left, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/validation_icub_left.pkl', 'wb'))
-    pickle.dump(validation_depth, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/validation_depth.pkl', 'wb'))
+    pickle.dump(validation_color, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/validation_color.pkl', 'wb'))
+    pickle.dump(validation_icub_right, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/validation_icub_right.pkl', 'wb'))
+    pickle.dump(validation_icub_left, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/validation_icub_left.pkl', 'wb'))
+    pickle.dump(validation_depth, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/validation_depth.pkl', 'wb'))
 
-    pickle.dump(testing_color, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/testing_color.pkl', 'wb'))
-    pickle.dump(testing_icub_right, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/testing_icub_right.pkl', 'wb'))
-    pickle.dump(testing_icub_left, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/testing_icub_left.pkl', 'wb'))
-    pickle.dump(testing_depth, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/testing_depth.pkl', 'wb'))
+    pickle.dump(testing_color, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/testing_color.pkl', 'wb'))
+    pickle.dump(testing_icub_right, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/testing_icub_right.pkl', 'wb'))
+    pickle.dump(testing_icub_left, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/testing_icub_left.pkl', 'wb'))
+    pickle.dump(testing_depth, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/testing_depth.pkl', 'wb'))
 
-    pickle.dump(y_training, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/y_training.pkl', 'wb'))
-    pickle.dump(y_validation, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/y_validation.pkl', 'wb'))
-    pickle.dump(y_testing, open('C:/Users/Frank/OneDrive/Bureaublad/Github/iCub-HRI-MVAE/y_testing.pkl', 'wb'))
+    pickle.dump(y_training, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/y_training.pkl', 'wb'))
+    pickle.dump(y_validation, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/y_validation.pkl', 'wb'))
+    pickle.dump(y_testing, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/y_testing.pkl', 'wb'))
 
 if __name__ == '__main__':
     main()
