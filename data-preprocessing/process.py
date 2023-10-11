@@ -12,6 +12,28 @@ objectnames = ['0_woodenCube', '1_pearToy', '2_yogurtYellowbottle', '3_cowToy', 
                '10_tomatoCan', '11_boxMilk', '12_containerNuts', '13_cornCob', '14_yellowFruitToy',
                '15_bottleNailPolisher', '16_boxRealSense', '17_clampOrange', '18_greenRectangleToy', '19_ketchupToy']
 
+def preprocess_image(path, sensor, j, width, height):
+    if sensor == 'icub_right' or sensor == 'icub_left':
+        init = cv2.imread(path + 'init_color_' + sensor + '_' + str(j) + '.png')
+        effect = cv2.imread(path + 'effect_color_' + sensor + '_' + str(j) + '.png')
+    else:
+        init = cv2.imread(path + 'init_' + sensor + '_' + str(j) + '.png')
+        effect = cv2.imread(path + 'effect_' + sensor + '_' + str(j) + '.png')
+
+    # Pre-processing steps
+    init = resize(init, width, height)
+    effect = resize(effect, width, height)
+    init = bgr_to_rgb(init)
+    effect = bgr_to_rgb(effect)
+    init = normalize(init)
+    effect = normalize(effect)
+    image = concatenate(init, effect)
+    image = image.reshape(1, *image.shape)
+    return image
+
+def save_data_to_disk(data, path):
+    pickle.dump(data, open(path, 'wb'))
+
 def main():
     width, height = 256, 192
 
@@ -55,8 +77,9 @@ def main():
             toolname = toolnames[y]
             for x in range(len(actions)):
                 action = actions[x]
-                label = actions.index(action)
-                
+                label_action = actions.index(action)
+                label_tool = toolnames.index(toolname)
+
                 # Split into sets: 60% Training, 20% Validation, 20% Testing
                 ids = np.random.choice(np.arange(10), 10, replace=False)
                 training_ids, validation_ids, testing_ids = ids[0:6], ids[6:8], ids[8:10]
@@ -67,23 +90,7 @@ def main():
 
                     # Loop through the number of repeats
                     for j in range(10):
-                        if sensor == 'icub_right' or sensor == 'icub_left':
-                            init = cv2.imread(path + 'init_color_' + sensor + '_' + str(j) + '.png')
-                            effect = cv2.imread(path + 'effect_color_' + sensor + '_' + str(j) + '.png')
-                        else:
-                            init = cv2.imread(path + 'init_' + sensor + '_' + str(j) + '.png')
-                            effect = cv2.imread(path + 'effect_' + sensor + '_' + str(j) + '.png')
-
-                        # Pre-processing steps
-                        init = resize(init, width, height)
-                        effect = resize(effect, width, height)
-                        init = bgr_to_rgb(init)
-                        effect = bgr_to_rgb(effect)
-                        init = normalize(init)
-                        effect = normalize(effect)
-                        # init = flatten(init, width, height)
-                        # effect = flatten(effect, width, height)
-                        image = concatenate(init, effect)
+                        image = preprocess_image(path, sensor, j, width, height)
 
                         if j in training_ids:
                             if sensor == 'color':
@@ -94,7 +101,7 @@ def main():
                                 training_icub_left = np.append(training_icub_left, image, axis=0)
                             if sensor == 'icub_right':
                                 training_icub_right = np.append(training_icub_right, image, axis=0)
-                            y_training.append(label)
+                            y_training.append((label_tool, label_action))
 
                         if j in validation_ids:
                             if sensor == 'color':
@@ -105,7 +112,7 @@ def main():
                                 validation_icub_left = np.append(validation_icub_left, image, axis=0)
                             if sensor == 'icub_right':
                                 validation_icub_right = np.append(validation_icub_right, image, axis=0)
-                            y_validation.append(label)
+                            y_validation.append((label_tool, label_action))
 
                         if j in testing_ids:
                             if sensor == 'color':
@@ -116,58 +123,57 @@ def main():
                                 testing_icub_left = np.append(testing_icub_left, image, axis=0)
                             if sensor == 'icub_right':
                                 testing_icub_right = np.append(testing_icub_right, image, axis=0)
-                            y_testing.append(label)
+                            y_testing.append((label_tool, label_action))
+
         print('concatenating of images' + ' ' + objectname + ' ' + 'done')
+        # Remove the first row
+        training_color, training_icub_right, training_icub_left = training_color[1:], training_icub_right[1:], training_icub_left[1:]
+        training_depth = training_depth[1:]
 
-    # Remove the first row
-    training_color, training_icub_right, training_icub_left = training_color[1:], training_icub_right[1:], training_icub_left[1:]
-    training_depth = training_depth[1:]
+        validation_color, validation_icub_right, validation_icub_left = validation_color[1:], validation_icub_right[1:], validation_icub_left[1:]
+        validation_depth = validation_depth[1:]
 
-    validation_color, validation_icub_right, validation_icub_left = validation_color[1:], validation_icub_right[1:], validation_icub_left[1:]
-    validation_depth = validation_depth[1:]
+        testing_color, testing_icub_right, testing_icub_left = testing_color[1:], testing_icub_right[1:], testing_icub_left[1:]
+        testing_depth = testing_depth[1:]
 
-    testing_color, testing_icub_right, testing_icub_left = testing_color[1:], testing_icub_right[1:], testing_icub_left[1:]
-    testing_depth = testing_depth[1:]
+        # Checking shapes
+        print("training: ", training_color.shape, training_icub_right.shape, training_icub_left.shape, training_depth.shape)
+        print("validation: ", validation_color.shape, validation_icub_right.shape, validation_icub_left.shape, validation_depth.shape)
+        print("testing: ", testing_color.shape, testing_icub_right.shape, testing_icub_left.shape, testing_depth.shape)
 
-    # Checking shapes
-    print("training: ", training_color.shape, training_icub_right.shape, training_icub_left.shape, training_depth.shape)
-    print("validation: ", validation_color.shape, validation_icub_right.shape, validation_icub_left.shape, validation_depth.shape)
-    print("testing: ", testing_color.shape, testing_icub_right.shape, testing_icub_left.shape, testing_depth.shape)
+        y_training = np.asarray(y_training, dtype=np.int32)
+        y_validation = np.asarray(y_validation, dtype=np.int32)
+        y_testing = np.asarray(y_testing, dtype=np.int32)
 
-    y_training = np.asarray(y_training, dtype=np.int32)
-    y_validation = np.asarray(y_validation, dtype=np.int32)
-    y_testing = np.asarray(y_testing, dtype=np.int32)
+        # Checking shapes
+        print("labels: ", y_training.shape, y_validation.shape, y_testing.shape)
 
-    # Checking shapes
-    print(y_training.shape, y_validation.shape, y_testing.shape)
-    
-    # Takes every fourth item starting from 0th item. 
-    y_training = y_training[0::4]
-    y_validation = y_validation[0::4]
-    y_testing = y_testing[0::4]
-    
-    # Checking shapes again
-    print(y_training.shape, y_validation.shape, y_testing.shape)
-    
-    # Save io matrices
-    pickle.dump(training_color, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/training_color.pkl', 'wb'))
-    pickle.dump(training_icub_right, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/training_icub_right.pkl', 'wb'))
-    pickle.dump(training_icub_left, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/training_icub_left.pkl', 'wb'))
-    pickle.dump(training_depth, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/training_depth.pkl', 'wb'))
+        y_training = y_training[0::4]
+        y_validation = y_validation[0::4]
+        y_testing = y_testing[0::4]
 
-    pickle.dump(validation_color, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/validation_color.pkl', 'wb'))
-    pickle.dump(validation_icub_right, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/validation_icub_right.pkl', 'wb'))
-    pickle.dump(validation_icub_left, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/validation_icub_left.pkl', 'wb'))
-    pickle.dump(validation_depth, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/validation_depth.pkl', 'wb'))
+        # Checking shapes again
+        print("labels: ", y_training.shape, y_validation.shape, y_testing.shape)
 
-    pickle.dump(testing_color, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/testing_color.pkl', 'wb'))
-    pickle.dump(testing_icub_right, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/testing_icub_right.pkl', 'wb'))
-    pickle.dump(testing_icub_left, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/testing_icub_left.pkl', 'wb'))
-    pickle.dump(testing_depth, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/testing_depth.pkl', 'wb'))
+        # Save data after processing each object
+        save_data_to_disk(training_color, 'C:\Users\Frank\OneDrive\Bureaublad\ARC\deep-multimodal-learning\data\training_color_' + objectname + '.pkl')
+        save_data_to_disk(training_icub_right, 'C:\Users\Frank\OneDrive\Bureaublad\ARC\deep-multimodal-learning\data\training_icub_right_' + objectname + '.pkl')
+        save_data_to_disk(training_icub_left, 'C:\Users\Frank\OneDrive\Bureaublad\ARC\deep-multimodal-learning\data\training_icub_left_' + objectname + '.pkl')
+        save_data_to_disk(training_depth, 'C:\Users\Frank\OneDrive\Bureaublad\ARC\deep-multimodal-learning\data\training_depth_' + objectname + '.pkl')
 
-    pickle.dump(y_training, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/y_training.pkl', 'wb'))
-    pickle.dump(y_validation, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/y_validation.pkl', 'wb'))
-    pickle.dump(y_testing, open('C:/Users/Frank/OneDrive/Bureaublad/Github/deep-multimodal-learning/y_testing.pkl', 'wb'))
+        save_data_to_disk(validation_color, 'C:\Users\Frank\OneDrive\Bureaublad\ARC\deep-multimodal-learning\data\validation_color_' + objectname + '.pkl')
+        save_data_to_disk(validation_icub_right, 'C:\Users\Frank\OneDrive\Bureaublad\ARC\deep-multimodal-learning\data\validation_icub_right_' + objectname + '.pkl')
+        save_data_to_disk(validation_icub_left, 'C:\Users\Frank\OneDrive\Bureaublad\ARC\deep-multimodal-learning\data\validation_icub_left_' + objectname + '.pkl')
+        save_data_to_disk(validation_depth, 'C:\Users\Frank\OneDrive\Bureaublad\ARC\deep-multimodal-learning\data\validation_depth_' + objectname + '.pkl')
+
+        save_data_to_disk(testing_color, 'C:\Users\Frank\OneDrive\Bureaublad\ARC\deep-multimodal-learning\data\testing_color_' + objectname + '.pkl')
+        save_data_to_disk(testing_icub_right, 'C:\Users\Frank\OneDrive\Bureaublad\ARC\deep-multimodal-learning\data\testing_icub_right_' + objectname + '.pkl')
+        save_data_to_disk(testing_icub_left, 'C:\Users\Frank\OneDrive\Bureaublad\ARC\deep-multimodal-learning\data\testing_icub_left_' + objectname + '.pkl')
+        save_data_to_disk(testing_depth, 'C:\Users\Frank\OneDrive\Bureaublad\ARC\deep-multimodal-learning\data\testing_depth_' + objectname + '.pkl')
+
+        save_data_to_disk(y_training, 'C:\Users\Frank\OneDrive\Bureaublad\ARC\deep-multimodal-learning\data\y_training_' + objectname + '.pkl')
+        save_data_to_disk(y_validation, 'C:\Users\Frank\OneDrive\Bureaublad\ARC\deep-multimodal-learning\data\y_validation_' + objectname + '.pkl')
+        save_data_to_disk(y_testing, 'C:\Users\Frank\OneDrive\Bureaublad\ARC\deep-multimodal-learning\data\y_testing_' + objectname + '.pkl')
 
 if __name__ == '__main__':
     main()
