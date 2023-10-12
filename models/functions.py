@@ -1,12 +1,17 @@
 from torch.utils.data import Dataset
 import pickle
+import os
 
 class CustomDataset(Dataset):
-    def __init__(self, data_pickle_file_path, labels_pickle_file_path):
-        with open(data_pickle_file_path, 'rb') as f:
+    def __init__(self, base_path, objectname, toolname, action, sensor, set_name):
+        # Construct the full path based on the provided parameters
+        data_file_path = os.path.join(base_path, objectname, toolname, action, sensor, f"{set_name}.pkl")
+        labels_file_path = os.path.join(base_path, objectname, toolname, action, sensor, f"y_{set_name}.pkl")
+        
+        with open(data_file_path, 'rb') as f:
             self.data = pickle.load(f)
         
-        with open(labels_pickle_file_path, 'rb') as f:
+        with open(labels_file_path, 'rb') as f:
             self.labels = pickle.load(f)
 
     def __len__(self):
@@ -17,6 +22,15 @@ class CustomDataset(Dataset):
         label = self.labels[idx]
         return sample, label
     
+def get_datasets_for_combinations(base_path, objectnames, toolnames, actions, sensor, set_name):
+    datasets = []
+    for objectname in objectnames:
+        for toolname in toolnames:
+            for action in actions:
+                dataset = CustomDataset(base_path=base_path, objectname=objectname, toolname=toolname, action=action, sensor=sensor, set_name=set_name)
+                datasets.append(dataset)
+    return datasets
+
 def Inference(instance, num_examples=5):
     images = []
     idx = 0

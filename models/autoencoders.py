@@ -2,35 +2,9 @@ from torch import nn
 import torch.nn.functional as F
 import torch
 
-# A plain Autoencoder is not that suitable for the goal at hand
-# class Autoencoder(nn.Module):
-#     def __init__(self, input_dim=24576, h_dim=200, z_dim=20):
-#         super(Autoencoder, self).__init__()
-
-#         # Encoder
-#         self.encoder = nn.Sequential(
-#             nn.Linear(input_dim, h_dim),
-#             nn.ReLU(),
-#             nn.Linear(h_dim, z_dim),
-#             nn.ReLU()
-#         )
-
-#         # Decoder
-#         self.decoder = nn.Sequential(
-#             nn.Linear(z_dim, h_dim),
-#             nn.ReLU(),
-#             nn.Linear(h_dim, input_dim),
-#             nn.Sigmoid()  # Use sigmoid for image reconstruction
-#         )
-
-#     def forward(self, x):
-#         z = self.encoder(x)
-#         x_reconstructed = self.decoder(z)
-#         return x_reconstructed
-
-class ConvolutionalAutoencoder(nn.Module):
+class CAE(nn.Module):
     def __init__(self):
-        super(ConvolutionalAutoencoder, self).__init__()
+        super(CAE, self).__init__()
 
         # Encoder
         self.encoder = nn.Sequential(
@@ -75,7 +49,7 @@ class ConvolutionalAutoencoder(nn.Module):
 
 
 # Input img -> Hidden dim -> mean, std -> Parameterization trick -> Decoder -> Output img
-class VariationalAutoEncoder(nn.Module):
+class VAE(nn.Module):
     def __init__(self, input_dim=24576, h_dim=200, z_dim=20):
         super().__init__()
 
@@ -104,11 +78,3 @@ class VariationalAutoEncoder(nn.Module):
         z_reparametrized = mu + sigma*epsilon
         x_reconstructed = self.decode(z_reparametrized)
         return x_reconstructed, mu, sigma
-
-if __name__ == "__main__":
-    x = torch.randn(1, 24576)
-    vae = VariationalAutoEncoder(input_dim=24576)
-    x_reconstructed, mu, sigma = vae(x)
-    print(x_reconstructed.shape)
-    print(mu.shape)
-    print(sigma.shape)
