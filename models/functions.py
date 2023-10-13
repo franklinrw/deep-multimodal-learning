@@ -140,6 +140,6 @@ def train_cae(model, loader, num_epochs=5, lr=1e-3):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-        print(f"Epoch [{epoch+1}/{NUM_EPOCHS}], Loss: {loss.item():.4f}")
+        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
 
     
