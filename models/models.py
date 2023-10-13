@@ -2,6 +2,22 @@ from torch import nn
 import torch.nn.functional as F
 import torch
 
+class MLP(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(MLP, self).__init__()
+        self.fc = nn.Sequential(
+            nn.Linear(input_dim, 512),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(256, output_dim)
+        )
+        
+    def forward(self, x):
+        return self.fc(x)
+
 class CAE(nn.Module):
     def __init__(self):
         super(CAE, self).__init__()

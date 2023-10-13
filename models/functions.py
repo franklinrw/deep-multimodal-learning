@@ -1,7 +1,11 @@
+import torch
+import torch.nn as nn
 from torch.utils.data import Dataset
 import pickle
 import os
 import matplotlib.pyplot as plt
+from torch.utils.data import DataLoader
+from torch.utils.data import ConcatDataset
 
 class CustomDataset(Dataset):
     def __init__(self, base_path, objectname, toolname, action, sensor, set_name):
@@ -34,47 +38,47 @@ def get_names():
     
     return sensornames, toolnames, actions, objectnames
     
-def get_datasets_for_combinations(base_path, objectnames, toolnames, actions, sensor, set_names):
+def get_datasets_for_combinations(base_path, objectnames, toolnames, actions, sensor, set_name):
     datasets = []
     for objectname in objectnames:
         for toolname in toolnames:
             for action in actions:
-                for set in set_names:
-                    dataset = CustomDataset(base_path=base_path, objectname=objectname, toolname=toolname, action=action, sensor=sensor, set_name=set)
-                    datasets.append(dataset)
+                dataset = CustomDataset(base_path=base_path, objectname=objectname, toolname=toolname, action=action, sensor=sensor, set_name)
+                datasets.append(dataset)
     return datasets
 
-def Inference(instance, num_examples=5):
-    images = []
-    idx = 0
-    num_classes = len(set(train_dataset.labels)) # Adjust this to match the number of unique labels in your dataset
+def get_dummy_loader():
+    BASE_PATH = 'C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/data'
+    SENSOR = 'color'
 
-    for x, y in train_dataset:  
-        if y == idx:
-            images.append(x)
-            idx += 1
-        if idx == num_classes:  # Adjusted to match the number of unique labels
-            break
+    # Combine training sets of all actions for one object
+    TOOL_NAMES = ['hook']
+    ACTIONS = ['pull']
+    OBJECT_NAMES = ['0_woodenCube', '1_pearToy', '2_yogurtYellowbottle']
 
-    if len(images) <= instance:
-        print(len(images))
-        print(instance)
-        print(f"No images found for instance {instance}.")
-        return
-    
-    encodings_instance = []
-    for d in range(num_classes):
-        with torch.no_grad():
-            mu, sigma = model.encode(torch.Tensor(images[d]).view(1, INPUT_DIM))
-        encodings_instance.append((mu, sigma))
+    datasets = get_datasets_for_combinations(BASE_PATH, OBJECT_NAMES, TOOL_NAMES, ACTIONS, SENSOR, 'training')
+    combined_dataset = ConcatDataset(datasets)
+    loader = DataLoader(dataset=combined_dataset, batch_size=32, shuffle=True)
 
-    mu, sigma = encodings_instance[instance]
-    for example in range(num_examples):
-        epsilon = torch.randn_like(sigma)
-        z = mu + sigma * epsilon #reparameterization
-        out = model.decode(z)
-        out = out.view(-1, 3, 64, 128) # Adjust the reshaping to match your data dimensions
-        save_image(out, f"generated_{instance}_ex{example}.png")
+    return loader
+
+def get_color_training_loader():
+    BASE_PATH = 'C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/data'
+    SENSOR = 'color'
+
+    # Combine training sets of all actions for one object
+    TOOL_NAMES = ['hook', 'ruler', 'spatula', 'sshot']
+    ACTIONS = ['left_to_right', 'pull', 'push', 'right_to_left']
+    OBJECT_NAMES = ['0_woodenCube', '1_pearToy', '2_yogurtYellowbottle', '3_cowToy', '4_tennisBallYellowGreen',
+                '5_blackCoinbag', '6_lemonSodaCan', '7_peperoneGreenToy', '8_boxEgg','9_pumpkinToy',
+                '10_tomatoCan', '11_boxMilk', '12_containerNuts', '13_cornCob', '14_yellowFruitToy',
+                '15_bottleNailPolisher', '16_boxRealSense', '17_clampOrange', '18_greenRectangleToy', '19_ketchupToy']
+
+    datasets = get_datasets_for_combinations(BASE_PATH, OBJECT_NAMES, TOOL_NAMES, ACTIONS, SENSOR, 'training')
+    combined_dataset = ConcatDataset(datasets)
+    loader = DataLoader(dataset=combined_dataset, batch_size=32, shuffle=True)
+
+    return loader
 
 def visualize_reconstruction(model, test_loader, num_samples=5):
     """
@@ -121,9 +125,9 @@ def visualize_reconstruction(model, test_loader, num_samples=5):
         plt.tight_layout()
         plt.show()
 
-def train_cae(model, loader, num_epochs=5, lr=1e-3, device="cpu"):
+def train_cae(model, loader, num_epochs=5, lr=1e-3):
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.Adam(model.parameters(), lr)
 
     for epoch in range(num_epochs):
         for batch in loader:
@@ -137,3 +141,5 @@ def train_cae(model, loader, num_epochs=5, lr=1e-3, device="cpu"):
             loss.backward()
             optimizer.step()
         print(f"Epoch [{epoch+1}/{NUM_EPOCHS}], Loss: {loss.item():.4f}")
+
+    
