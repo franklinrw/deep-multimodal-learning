@@ -43,7 +43,7 @@ def get_datasets_for_combinations(base_path, objectnames, toolnames, actions, se
     for objectname in objectnames:
         for toolname in toolnames:
             for action in actions:
-                dataset = CustomDataset(base_path=base_path, objectname=objectname, toolname=toolname, action=action, sensor=sensor, set_name)
+                dataset = CustomDataset(base_path=base_path, objectname=objectname, toolname=toolname, action=action, sensor=sensor, set_name=set_name)
                 datasets.append(dataset)
     return datasets
 
