@@ -4,12 +4,10 @@ from torch.utils.data import Dataset
 import pickle
 import os
 import matplotlib.pyplot as plt
-from torch.utils.data import DataLoader
-from torch.utils.data import ConcatDataset
+from torch.utils.data import DataLoader, ConcatDataset
 
 class CustomDataset(Dataset):
     def __init__(self, base_path, objectname, toolname, action, sensor, set_name):
-        # Construct the full path based on the provided parameters
         data_file_path = os.path.join(base_path, objectname, toolname, action, sensor, f"{set_name}.pkl")
         labels_file_path = os.path.join(base_path, objectname, toolname, action, sensor, f"y_{set_name}.pkl")
         
@@ -53,12 +51,13 @@ def get_dummy_loader():
 
     # Combine training sets of all actions for one object
     TOOL_NAMES = ['hook']
-    ACTIONS = ['pull']
+    ACTIONS = ['pull', 'push']
     OBJECT_NAMES = ['0_woodenCube', '1_pearToy', '2_yogurtYellowbottle']
 
     datasets = get_datasets_for_combinations(BASE_PATH, OBJECT_NAMES, TOOL_NAMES, ACTIONS, SENSOR, 'training')
+    # concatenates the data and labels?
     combined_dataset = ConcatDataset(datasets)
-    loader = DataLoader(dataset=combined_dataset, batch_size=32, shuffle=True)
+    loader = DataLoader(dataset=combined_dataset, batch_size=3, shuffle=True)
 
     return loader
 
@@ -142,4 +141,64 @@ def train_cae(model, loader, num_epochs=5, lr=1e-3):
             optimizer.step()
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
 
+def extract_features(model, loader, device="cpu"):
+    model.eval()
+    features_list = []
+    labels_list = []
     
+    with torch.no_grad():
+        for batch in loader:
+            images, labels = batch
+            images = images.float() # Model expects float
+            images = images.squeeze(1)  # Remove the dimension with size 1
+            images = images.permute(0, 3, 1, 2)  # Move the channels dimension to the correct position
+            features = model.encoder(images)
+            features_list.append(features.reshape(features.size(0), -1))
+
+            #print(labels[:5])
+            #print(type(labels))
+            # Convert labels to tensor if they are lists
+            if isinstance(labels, list):
+                labels = torch.cat(labels, dim=0)  # Concatenate the list of tensors
+
+            labels_list.append(labels)
+
+    return torch.cat(features_list, dim=0), torch.cat(labels_list, dim=0)
+
+def train_mlp(mlp, num_epochs, train_loader, val_loader, device="cpu"):
+    # Loss and optimizer
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(mlp.parameters(), lr=0.001)
+
+    # Training loop
+    num_epochs = 20
+    for epoch in range(num_epochs):
+        mlp.train()
+        for features, labels in train_loader:
+            features, labels = features.to(device), labels.to(DEVICE)
+            
+            # Forward pass
+            outputs = mlp(features)
+            loss = criterion(outputs, labels)
+            
+            # Backward pass and optimization
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+        
+        # Validation
+        mlp.eval()
+        val_loss = 0.0
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            for features, labels in val_loader:
+                features, labels = features.to(device), labels.to(device)
+                outputs = mlp(features)
+                loss = criterion(outputs, labels)
+                val_loss += loss.item()
+                _, predicted = outputs.max(1)
+                total += labels.size(0)
+                correct += predicted.eq(labels).sum().item()
+        
+        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss/len(val_loader):.4f}, Val Acc: {100. * correct / total:.2f}%")

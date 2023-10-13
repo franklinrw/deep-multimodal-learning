@@ -15,3 +15,6 @@ LR_RATE = 1e-3
 # Training loop
 model = CAE()
 train_cae(model, loader, NUM_EPOCHS, LR_RATE)
+
+model_path = "C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/weights/dummy.pth"
+torch.save(model.state_dict(), model_path)
