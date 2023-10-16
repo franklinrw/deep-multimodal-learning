@@ -18,6 +18,9 @@ val_loader = get_dummy_loader()
 train_features, train_labels = extract_features(loaded_cae, train_loader)
 val_features, val_labels = extract_features(loaded_cae, val_loader)
 
+print(train_features.shape)
+print(train_labels.shape)
+
 # Convert extracted features to TensorDatasets
 train_dataset = TensorDataset(train_features, train_labels)
 val_dataset = TensorDataset(val_features, val_labels)

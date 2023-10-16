@@ -50,8 +50,8 @@ def get_dummy_loader():
     SENSOR = 'color'
 
     # Combine training sets of all actions for one object
-    TOOL_NAMES = ['hook']
-    ACTIONS = ['pull', 'push']
+    TOOL_NAMES = ['spatula']
+    ACTIONS = ['pull']
     OBJECT_NAMES = ['0_woodenCube', '1_pearToy', '2_yogurtYellowbottle']
 
     datasets = get_datasets_for_combinations(BASE_PATH, OBJECT_NAMES, TOOL_NAMES, ACTIONS, SENSOR, 'training')
@@ -149,19 +149,19 @@ def extract_features(model, loader, device="cpu"):
     with torch.no_grad():
         for batch in loader:
             images, labels = batch
+            #print(len(images), len(labels))
             images = images.float() # Model expects float
             images = images.squeeze(1)  # Remove the dimension with size 1
             images = images.permute(0, 3, 1, 2)  # Move the channels dimension to the correct position
             features = model.encoder(images)
-            features_list.append(features.reshape(features.size(0), -1))
+            #print(len(features))
+            #features_list.append(features.reshape(features.size(0), -1))
+            features_list.append(features)
 
-            #print(labels[:5])
-            #print(type(labels))
             # Convert labels to tensor if they are lists
-            if isinstance(labels, list):
-                labels = torch.cat(labels, dim=0)  # Concatenate the list of tensors
-
-            labels_list.append(labels)
+            # if isinstance(labels, list):
+            #     labels = torch.cat(labels, dim=0)  # Concatenate the list of tensors
+            labels_list.append(labels[1])
 
     return torch.cat(features_list, dim=0), torch.cat(labels_list, dim=0)
 
