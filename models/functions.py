@@ -5,6 +5,7 @@ import pickle
 import os
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, ConcatDataset
+import numpy as np
 
 class CustomDataset(Dataset):
     def __init__(self, base_path, objectname, toolname, action, sensor, set_name):
@@ -147,11 +148,10 @@ def train_mlp(mlp, num_epochs, train_loader, val_loader, device="cpu"):
     optimizer = torch.optim.Adam(mlp.parameters(), lr=0.001)
 
     # Training loop
-    num_epochs = 20
     for epoch in range(num_epochs):
         mlp.train()
         for features, labels in train_loader:
-            features, labels = features.to(device), labels.to(device)
+            #features, labels = features.to(device), labels.to(device)
             
             # Forward pass
             outputs = mlp(features)
@@ -179,26 +179,36 @@ def train_mlp(mlp, num_epochs, train_loader, val_loader, device="cpu"):
         
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss/len(val_loader):.4f}, Val Acc: {100. * correct / total:.2f}%")
 
-def extract_features(model, loader, device="cpu"):
-    model.eval()
+def extract_features(loaded_ae, loader, device="cpu"):
+    loaded_ae.eval()
     features_list = []
     labels_list = []
     
     with torch.no_grad():
         for batch in loader:
             images, labels = batch
-            #print(len(images), len(labels))
+            
+            # Check the size of the input
+            print(len(images), len(labels[1]))
+
             images = images.float() # Model expects float
             images = images.squeeze(1)  # Remove the dimension with size 1
-            images = images.permute(0, 3, 1, 2)  # Move the channels dimension to the correct position
-            features = model.encoder(images)
-            #print(len(features))
-            #features_list.append(features.reshape(features.size(0), -1))
-            features_list.append(features)
+            images = images.permute(0, 3, 1, 2)  # Move the channels dimension to the correct position [batch_size, channels, height, width]
+            features = loaded_ae.encoder(images)
 
-            # Convert labels to tensor if they are lists
-            # if isinstance(labels, list):
-            #     labels = torch.cat(labels, dim=0)  # Concatenate the list of tensors
-            labels_list.append(labels[1])
+            # Batch features shape
+            print("Batch features shape:", features.shape)
 
-    return torch.cat(features_list, dim=0), torch.cat(labels_list, dim=0)
+            features_list.append(features.reshape(features.size(0), -1)) # What is happening here?
+            #features_list.append(features)
+
+            print("Batch labels shape:", labels[1].shape)
+            labels_list.append(labels[1]) # 0: Tools, 1: Actions
+
+    f_list = torch.cat(features_list, dim=0)
+    l_list = torch.cat(labels_list, dim=0)
+
+    # print("Concat Features List shape:", f_list.shape)
+    # print("Concat Labels List shape:", l_list.shape)
+
+    return f_list, l_list
