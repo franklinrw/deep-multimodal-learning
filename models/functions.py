@@ -141,30 +141,6 @@ def train_cae(model, loader, num_epochs=5, lr=1e-3):
             optimizer.step()
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
 
-def extract_features(model, loader, device="cpu"):
-    model.eval()
-    features_list = []
-    labels_list = []
-    
-    with torch.no_grad():
-        for batch in loader:
-            images, labels = batch
-            #print(len(images), len(labels))
-            images = images.float() # Model expects float
-            images = images.squeeze(1)  # Remove the dimension with size 1
-            images = images.permute(0, 3, 1, 2)  # Move the channels dimension to the correct position
-            features = model.encoder(images)
-            #print(len(features))
-            #features_list.append(features.reshape(features.size(0), -1))
-            features_list.append(features)
-
-            # Convert labels to tensor if they are lists
-            # if isinstance(labels, list):
-            #     labels = torch.cat(labels, dim=0)  # Concatenate the list of tensors
-            labels_list.append(labels[1])
-
-    return torch.cat(features_list, dim=0), torch.cat(labels_list, dim=0)
-
 def train_mlp(mlp, num_epochs, train_loader, val_loader, device="cpu"):
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -175,7 +151,7 @@ def train_mlp(mlp, num_epochs, train_loader, val_loader, device="cpu"):
     for epoch in range(num_epochs):
         mlp.train()
         for features, labels in train_loader:
-            features, labels = features.to(device), labels.to(DEVICE)
+            features, labels = features.to(device), labels.to(device)
             
             # Forward pass
             outputs = mlp(features)
@@ -202,3 +178,27 @@ def train_mlp(mlp, num_epochs, train_loader, val_loader, device="cpu"):
                 correct += predicted.eq(labels).sum().item()
         
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss/len(val_loader):.4f}, Val Acc: {100. * correct / total:.2f}%")
+
+def extract_features(model, loader, device="cpu"):
+    model.eval()
+    features_list = []
+    labels_list = []
+    
+    with torch.no_grad():
+        for batch in loader:
+            images, labels = batch
+            #print(len(images), len(labels))
+            images = images.float() # Model expects float
+            images = images.squeeze(1)  # Remove the dimension with size 1
+            images = images.permute(0, 3, 1, 2)  # Move the channels dimension to the correct position
+            features = model.encoder(images)
+            #print(len(features))
+            #features_list.append(features.reshape(features.size(0), -1))
+            features_list.append(features)
+
+            # Convert labels to tensor if they are lists
+            # if isinstance(labels, list):
+            #     labels = torch.cat(labels, dim=0)  # Concatenate the list of tensors
+            labels_list.append(labels[1])
+
+    return torch.cat(features_list, dim=0), torch.cat(labels_list, dim=0)
