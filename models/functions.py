@@ -126,89 +126,302 @@ def visualize_reconstruction(model, test_loader, num_samples=5):
         plt.show()
 
 def train_cae(model, loader, num_epochs=5, lr=1e-3):
-    criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr)
+    """
+    This function trains a convolutional autoencoder (CAE).
 
+    Parameters:
+    model (nn.Module): The autoencoder model to be trained.
+    loader (DataLoader): DataLoader that provides batches of data.
+    num_epochs (int): The number of training epochs. Default is 5.
+    lr (float): Learning rate for the optimizer. Default is 0.001.
+
+    Returns:
+    None: The function trains the model in place and does not return anything.
+    """
+
+    # Define the loss function as Mean Squared Error Loss. It's common for reconstruction tasks.
+    criterion = nn.MSELoss()
+
+    # Define the optimizer that will be used to minimize the loss. Here, we're using Adam.
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+    # Set the model to training mode. This activates layers like dropout and batch normalization.
+    model.train()
+
+    # Iterate over the dataset multiple times (each iteration over the entire dataset is called an epoch).
     for epoch in range(num_epochs):
+        # Initialize the running loss to zero at the beginning of each epoch.
+        running_loss = 0.0
+
+        # Iterate over the DataLoader. Each iteration provides a batch of data.
         for batch in loader:
-            images, _ = batch  # We don't need labels for autoencoders
-            images = images.float() # Model expects float
-            images = images.squeeze(1)  # Remove the dimension with size 1
-            images = images.permute(0, 3, 1, 2)   # Move the channels dimension to the correct position
+            # Unpack the batch. We're not interested in labels since autoencoders are unsupervised.
+            images, _ = batch
+
+            # Prepare the images for input into the model by ensuring the data type and structure are correct.
+            images = images.float()
+            images = images.squeeze(1)
+            images = images.permute(0, 3, 1, 2)
+
+            # Forward pass: pass the images through the model to get the reconstructed images.
             outputs = model(images)
-            loss = criterion(outputs, images)  # Reconstruction loss
+
+            # Calculate the loss between the original and the reconstructed images.
+            loss = criterion(outputs, images)
+
+            # Zero the parameter gradients to prevent accumulation during backpropagation.
             optimizer.zero_grad()
+
+            # Backward pass: compute the gradients of the loss w.r.t. the model parameters.
             loss.backward()
+
+            # Update the model parameters based on the computed gradients.
             optimizer.step()
-        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
+
+            # Accumulate the loss for reporting.
+            running_loss += loss.item()
+
+        # Calculate the average loss for this epoch.
+        avg_loss = running_loss / len(loader)
+
+        # Print the epoch's summary. The loss is averaged over all batches to get a sense of performance over the entire dataset.
+        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {avg_loss:.4f}")
+
+
+# def train_cae(model, loader, num_epochs=5, lr=1e-3):
+#     criterion = nn.MSELoss()
+#     optimizer = torch.optim.Adam(model.parameters(), lr)
+
+#     for epoch in range(num_epochs):
+#         for batch in loader:
+#             images, _ = batch  # We don't need labels for autoencoders
+#             images = images.float() # Model expects float
+#             images = images.squeeze(1)  # Remove the dimension with size 1
+#             images = images.permute(0, 3, 1, 2)   # Move the channels dimension to the correct position
+#             outputs = model(images)
+#             loss = criterion(outputs, images)  # Reconstruction loss
+#             optimizer.zero_grad()
+#             loss.backward()
+#             optimizer.step()
+#         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
 
 def train_mlp(mlp, num_epochs, train_loader, val_loader, device="cpu"):
-    # Loss and optimizer
+    """
+    This function trains a Multilayer Perceptron (MLP) model.
+
+    Parameters:
+    mlp (nn.Module): The MLP model to be trained.
+    num_epochs (int): The number of training epochs.
+    train_loader (DataLoader): DataLoader for the training set.
+    val_loader (DataLoader): DataLoader for the validation set.
+    device (str): The device where the model and data should be loaded ('cpu' or 'cuda').
+
+    Returns:
+    None: The function trains the model in place and does not return anything.
+    """
+
+    # Define the loss function. CrossEntropyLoss is commonly used for classification tasks.
     criterion = nn.CrossEntropyLoss()
+
+    # Define the optimizer, specifying the learning rate and the parameters to optimize.
+    # Adam is a commonly used optimizer due to its efficiency and minimal requirement for manual tuning.
     optimizer = torch.optim.Adam(mlp.parameters(), lr=0.001)
 
-    # Training loop
+    # Iterate over the dataset multiple times (each iteration over the entire dataset is called an epoch).
     for epoch in range(num_epochs):
+        # Set the model to training mode. This activates layers like dropout and batch normalization.
         mlp.train()
+
+        # Initialize the running loss to zero at the beginning of each epoch.
+        running_loss = 0.0
+
+        # Iterate over the DataLoader for the training set.
         for features, labels in train_loader:
-            #features, labels = features.to(device), labels.to(device)
-            
-            # Forward pass
+            # Move data to the specified device (if not already there).
+            features, labels = features.to(device), labels.to(device)
+
+            # Forward pass: pass the input through the model to get the predictions.
             outputs = mlp(features)
+
+            # Calculate the loss by comparing the model output and actual labels.
             loss = criterion(outputs, labels)
-            
-            # Backward pass and optimization
+
+            # Zero the parameter gradients to prevent accumulation during backpropagation.
             optimizer.zero_grad()
+
+            # Backward pass: compute the gradients of the loss w.r.t. the model parameters.
             loss.backward()
+
+            # Update the model parameters based on the computed gradients.
             optimizer.step()
-        
-        # Validation
-        mlp.eval()
+
+            # Accumulate the loss for reporting.
+            running_loss += loss.item()
+
+        # Calculate the average loss for this epoch.
+        avg_train_loss = running_loss / len(train_loader)
+
+        # Validation phase: we evaluate the model on the validation set to check its performance on unseen data.
+        mlp.eval()  # Set the model to evaluation mode.
+
         val_loss = 0.0
         correct = 0
         total = 0
+
+        # We do not need to calculate gradients for evaluation, so we use torch.no_grad() to prevent PyTorch from using memory to track tensors for autograd.
         with torch.no_grad():
             for features, labels in val_loader:
                 features, labels = features.to(device), labels.to(device)
+
+                # Forward pass: pass the input through the model to get the predictions.
                 outputs = mlp(features)
+
+                # Calculate the loss by comparing the model output and actual labels.
                 loss = criterion(outputs, labels)
+
+                # Accumulate the validation loss.
                 val_loss += loss.item()
+
+                # Calculate the number of correct predictions.
                 _, predicted = outputs.max(1)
                 total += labels.size(0)
                 correct += predicted.eq(labels).sum().item()
+
+        # Calculate the average validation loss and the accuracy over the entire validation set.
+        avg_val_loss = val_loss / len(val_loader)
+        val_accuracy = 100. * correct / total
+
+        # Print the summary for this epoch.
+        print(f"Epoch [{epoch+1}/{num_epochs}], "
+              f"Loss: {avg_train_loss:.4f}, "
+              f"Val Loss: {avg_val_loss:.4f}, "
+              f"Val Acc: {val_accuracy:.2f}%")
+
+# def train_mlp(mlp, num_epochs, train_loader, val_loader, device="cpu"):
+#     # Loss and optimizer
+#     criterion = nn.CrossEntropyLoss()
+#     optimizer = torch.optim.Adam(mlp.parameters(), lr=0.001)
+
+#     # Training loop
+#     for epoch in range(num_epochs):
+#         mlp.train()
+#         for features, labels in train_loader:
+#             #features, labels = features.to(device), labels.to(device)
+            
+#             # Forward pass
+#             outputs = mlp(features)
+#             loss = criterion(outputs, labels)
+            
+#             # Backward pass and optimization
+#             optimizer.zero_grad()
+#             loss.backward()
+#             optimizer.step()
         
-        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss/len(val_loader):.4f}, Val Acc: {100. * correct / total:.2f}%")
+#         # Validation
+#         mlp.eval()
+#         val_loss = 0.0
+#         correct = 0
+#         total = 0
+#         with torch.no_grad():
+#             for features, labels in val_loader:
+#                 features, labels = features.to(device), labels.to(device)
+#                 outputs = mlp(features)
+#                 loss = criterion(outputs, labels)
+#                 val_loss += loss.item()
+#                 _, predicted = outputs.max(1)
+#                 total += labels.size(0)
+#                 correct += predicted.eq(labels).sum().item()
+        
+#         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss/len(val_loader):.4f}, Val Acc: {100. * correct / total:.2f}%")
 
 def extract_features(loaded_ae, loader, device="cpu"):
+    """
+    This function extracts features from the data using the encoder part of the autoencoder model.
+    
+    Parameters:
+    loaded_ae (nn.Module): The trained autoencoder model.
+    loader (DataLoader): DataLoader that provides batches of data.
+    device (str): The device on which the model is, typically either "cpu" or "cuda".
+    
+    Returns:
+    tuple: A tuple containing two elements: the extracted features and the corresponding labels.
+    """
+
+    # Set the model to evaluation mode. This is necessary because, in PyTorch, 
+    # certain layers behave differently during training compared to evaluation.
     loaded_ae.eval()
+
+    # These lists will store the features and labels.
     features_list = []
     labels_list = []
-    
+
+    # Disabling gradient calculation is useful for inference, 
+    # it reduces memory consumption for computations.
     with torch.no_grad():
+        # Iterate over the dataset. 'loader' is an iterable.
+        # Each iteration returns a batch of images and corresponding labels.
         for batch in loader:
             images, labels = batch
-            
-            # Check the size of the input
-            print(len(images), len(labels[1]))
 
-            images = images.float() # Model expects float
-            images = images.squeeze(1)  # Remove the dimension with size 1
-            images = images.permute(0, 3, 1, 2)  # Move the channels dimension to the correct position [batch_size, channels, height, width]
+            # Convert the images to the appropriate type (float).
+            images = images.float()
+
+            # Remove any empty dimensions or dimensions with size one.
+            images = images.squeeze(1)
+
+            # Rearrange the dimensions of the image. The model expects the channel dimension to be second.
+            images = images.permute(0, 3, 1, 2)
+
+            # Pass the images through the model's encoder to get the features.
             features = loaded_ae.encoder(images)
 
-            # Batch features shape
-            print("Batch features shape:", features.shape)
+            # Reshape the features to a 2D tensor, so that each row corresponds to a set of features from one image.
+            # The '-1' tells PyTorch to infer the total number of features automatically.
+            features_reshaped = features.view(features.size(0), -1)
 
-            features_list.append(features.reshape(features.size(0), -1)) # What is happening here?
-            #features_list.append(features)
+            # Add the features and labels to our lists.
+            features_list.append(features_reshaped)
+            labels_list.append(labels[1])  # Assuming 'labels[1]' contains the action labels.
 
-            print("Batch labels shape:", labels[1].shape)
-            labels_list.append(labels[1]) # 0: Tools, 1: Actions
+    # Concatenate the list of tensors into a single tensor.
+    # 'torch.cat' concatenates tensors along a given dimension, here it's along dimension 0.
+    all_features = torch.cat(features_list, dim=0)
+    all_labels = torch.cat(labels_list, dim=0)
 
-    f_list = torch.cat(features_list, dim=0)
-    l_list = torch.cat(labels_list, dim=0)
+    return all_features, all_labels
 
-    # print("Concat Features List shape:", f_list.shape)
-    # print("Concat Labels List shape:", l_list.shape)
 
-    return f_list, l_list
+# OLD
+# def extract_features(loaded_ae, loader, device="cpu"):
+#     loaded_ae.eval()
+#     features_list = []
+#     labels_list = []
+    
+#     with torch.no_grad():
+#         for batch in loader:
+#             images, labels = batch
+            
+#             # Check the size of the input
+#             print(len(images), len(labels[1]))
+
+#             images = images.float() # Model expects float
+#             images = images.squeeze(1)  # Remove the dimension with size 1
+#             images = images.permute(0, 3, 1, 2)  # Move the channels dimension to the correct position [batch_size, channels, height, width]
+#             features = loaded_ae.encoder(images)
+
+#             # Batch features shape
+#             print("Batch features shape:", features.shape)
+
+#             features_list.append(features.reshape(features.size(0), -1)) # What is happening here?
+#             #features_list.append(features)
+
+#             print("Batch labels shape:", labels[1].shape)
+#             labels_list.append(labels[1]) # 0: Tools, 1: Actions
+
+#     f_list = torch.cat(features_list, dim=0)
+#     l_list = torch.cat(labels_list, dim=0)
+
+#     # print("Concat Features List shape:", f_list.shape)
+#     # print("Concat Labels List shape:", l_list.shape)
+
+#     return f_list, l_list
