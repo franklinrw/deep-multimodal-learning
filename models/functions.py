@@ -279,9 +279,6 @@ def train_cae(cae, loader, num_epochs=5, lr=1e-3, device="cuda"):
         # Print the epoch's summary. The loss is averaged over all batches to get a sense of performance over the entire dataset.
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {avg_loss:.4f}")
 
-import torch
-from torch import nn
-
 def calculate_accuracy(outputs, labels):
     """
     Calculate the accuracy of the predictions based on the maximum scoring class (index) in outputs.
