@@ -6,6 +6,7 @@ import os
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, ConcatDataset
 import numpy as np
+import random
 
 # def get_names():
 #     sensornames = ['color', 'depthcolormap', 'icub_left', 'icub_right']
@@ -96,7 +97,7 @@ class CustomDataset(Dataset):
 
         return sample, label
 
-def get_datasets_for_combinations(base_path, objectnames, toolnames, actions, sensor, set_name):
+def get_datasets(base_path, objectnames, toolnames, actions, sensor, set_name):
     """
     This function generates a list of CustomDataset instances for each combination of parameters provided.
     It is useful for creating datasets that need to be loaded for training/testing in machine learning models,
@@ -135,8 +136,8 @@ def get_datasets_for_combinations(base_path, objectnames, toolnames, actions, se
                 # Add the newly created dataset to the list.
                 datasets.append(dataset)
 
-    # Return the list of datasets.
-    return datasets
+    # Return concatenated datasets of the CustomDataset
+    return ConcatDataset(datasets)
 
 def get_dummy_loader():
     BASE_PATH = 'C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/data'
@@ -147,30 +148,91 @@ def get_dummy_loader():
     ACTIONS = ['pull']
     OBJECT_NAMES = ['0_woodenCube', '1_pearToy', '2_yogurtYellowbottle']
 
-    datasets = get_datasets_for_combinations(BASE_PATH, OBJECT_NAMES, TOOL_NAMES, ACTIONS, SENSOR, 'training')
+    datasets = get_datasets(BASE_PATH, OBJECT_NAMES, TOOL_NAMES, ACTIONS, SENSOR, 'training')
     # concatenates the data and labels?
     combined_dataset = ConcatDataset(datasets)
     loader = DataLoader(dataset=combined_dataset, batch_size=3, shuffle=True)
 
     return loader
 
-def get_color_loader(set_name):
-    BASE_PATH = 'C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/data'
-    SENSOR = 'color'
+def shuffle_and_split_object_names(object_names, train_ratio, val_ratio, test_ratio):
+    """
+    Shuffles and splits object names into training, validation, and test sets.
 
-    # Combine training sets of all actions for one object
+    :param object_names: List of object names.
+    :param train_ratio: Proportion of object names to include in the training set.
+    :param val_ratio: Proportion of object names to include in the validation set.
+    :param test_ratio: Proportion of object names to include in the test set.
+    :return: Three lists containing the object names for the training, validation, and test sets.
+    """
+    # Ensure the ratios are correct
+    assert train_ratio + val_ratio + test_ratio == 1.0, "Ratios must add up to 1.0"
+
+    # Shuffle the object names
+    random.shuffle(object_names)
+
+    # Calculate split indices
+    total_objects = len(object_names)
+    train_end_idx = int(total_objects * train_ratio)
+    val_end_idx = train_end_idx + int(total_objects * val_ratio)
+
+    # Split the object names
+    train_objects = object_names[:train_end_idx]
+    val_objects = object_names[train_end_idx:val_end_idx]
+    test_objects = object_names[val_end_idx:]
+
+    return train_objects, val_objects, test_objects
+
+def get_loaders(sensor="color", batch_size=32):
+    BASE_PATH = 'C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/data'
+
+    # Define the tool names and actions
     TOOL_NAMES = ['hook', 'ruler', 'spatula', 'sshot']
     ACTIONS = ['left_to_right', 'pull', 'push', 'right_to_left']
+
+    # All available object names
     OBJECT_NAMES = ['0_woodenCube', '1_pearToy', '2_yogurtYellowbottle', '3_cowToy', '4_tennisBallYellowGreen',
                 '5_blackCoinbag', '6_lemonSodaCan', '7_peperoneGreenToy', '8_boxEgg','9_pumpkinToy',
                 '10_tomatoCan', '11_boxMilk', '12_containerNuts', '13_cornCob', '14_yellowFruitToy',
                 '15_bottleNailPolisher', '16_boxRealSense', '17_clampOrange', '18_greenRectangleToy', '19_ketchupToy']
 
-    datasets = get_datasets_for_combinations(BASE_PATH, OBJECT_NAMES, TOOL_NAMES, ACTIONS, SENSOR, set_name)
-    combined_dataset = ConcatDataset(datasets)
-    loader = DataLoader(dataset=combined_dataset, batch_size=32, shuffle=True)
+    # Ratios for splitting the datasets
+    TRAIN_RATIO = 0.6
+    VAL_RATIO = 0.2
+    TEST_RATIO = 0.2  # This is calculated but explicitly defining for clarity
 
-    return loader
+    # Shuffle and split the object names
+    train_objects, val_objects, test_objects = shuffle_and_split_object_names(OBJECT_NAMES, TRAIN_RATIO, VAL_RATIO, TEST_RATIO)
+
+    # Get datasets for the selected combinations
+    train_dataset = get_datasets(BASE_PATH, train_objects, TOOL_NAMES, ACTIONS, sensor, "training")
+    val_dataset = get_datasets(BASE_PATH, val_objects, TOOL_NAMES, ACTIONS, sensor, "validation")
+    test_dataset = get_datasets(BASE_PATH, test_objects, TOOL_NAMES, ACTIONS, sensor, "test")
+
+    # Create the dataloader for all sets
+    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=True)
+
+    return train_loader, val_loader, test_loader
+
+# def get_color_loader(set_name):
+#     BASE_PATH = 'C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/data'
+#     SENSOR = 'color'
+
+#     # Combine training sets of all actions for one object
+#     TOOL_NAMES = ['hook', 'ruler', 'spatula', 'sshot']
+#     ACTIONS = ['left_to_right', 'pull', 'push', 'right_to_left']
+#     OBJECT_NAMES = ['0_woodenCube', '1_pearToy', '2_yogurtYellowbottle', '3_cowToy', '4_tennisBallYellowGreen',
+#                 '5_blackCoinbag', '6_lemonSodaCan', '7_peperoneGreenToy', '8_boxEgg','9_pumpkinToy',
+#                 '10_tomatoCan', '11_boxMilk', '12_containerNuts', '13_cornCob', '14_yellowFruitToy',
+#                 '15_bottleNailPolisher', '16_boxRealSense', '17_clampOrange', '18_greenRectangleToy', '19_ketchupToy']
+
+#     datasets = get_datasets_for_combinations(BASE_PATH, OBJECT_NAMES, TOOL_NAMES, ACTIONS, SENSOR, set_name)
+#     combined_dataset = ConcatDataset(datasets)
+#     loader = DataLoader(dataset=combined_dataset, batch_size=32, shuffle=True)
+
+#     return loader
 
 def visualize_reconstruction(model, test_loader, num_samples=5):
     """
