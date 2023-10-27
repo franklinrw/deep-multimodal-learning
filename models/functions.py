@@ -8,17 +8,6 @@ from torch.utils.data import DataLoader, ConcatDataset
 import numpy as np
 import random
 
-# def get_names():
-#     sensornames = ['color', 'depthcolormap', 'icub_left', 'icub_right']
-#     toolnames = ['hook', 'ruler', 'spatula', 'sshot']
-#     actions = ['left_to_right', 'pull', 'push', 'right_to_left']
-#     objectnames = ['0_woodenCube', '1_pearToy', '2_yogurtYellowbottle', '3_cowToy', '4_tennisBallYellowGreen',
-#                 '5_blackCoinbag', '6_lemonSodaCan', '7_peperoneGreenToy', '8_boxEgg','9_pumpkinToy',
-#                 '10_tomatoCan', '11_boxMilk', '12_containerNuts', '13_cornCob', '14_yellowFruitToy',
-#                 '15_bottleNailPolisher', '16_boxRealSense', '17_clampOrange', '18_greenRectangleToy', '19_ketchupToy']
-    
-#     return sensornames, toolnames, actions, objectnames
-
 class CustomDataset(Dataset):
     """
     A custom Dataset class that loads data and labels from pickle files for each combination of parameters.
@@ -183,7 +172,7 @@ def shuffle_and_split_object_names(object_names, train_ratio, val_ratio, test_ra
 
     return train_objects, val_objects, test_objects
 
-def get_loaders(sensor="color", batch_size=32):
+def get_loaders(sensor="color", batch_size=8):
     BASE_PATH = 'C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/data'
 
     # Define the tool names and actions
@@ -207,7 +196,7 @@ def get_loaders(sensor="color", batch_size=32):
     # Get datasets for the selected combinations
     train_dataset = get_datasets(BASE_PATH, train_objects, TOOL_NAMES, ACTIONS, sensor, "training")
     val_dataset = get_datasets(BASE_PATH, val_objects, TOOL_NAMES, ACTIONS, sensor, "validation")
-    test_dataset = get_datasets(BASE_PATH, test_objects, TOOL_NAMES, ACTIONS, sensor, "test")
+    test_dataset = get_datasets(BASE_PATH, test_objects, TOOL_NAMES, ACTIONS, sensor, "testing")
 
     # Create the dataloader for all sets
     train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
@@ -215,24 +204,6 @@ def get_loaders(sensor="color", batch_size=32):
     test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=True)
 
     return train_loader, val_loader, test_loader
-
-# def get_color_loader(set_name):
-#     BASE_PATH = 'C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/data'
-#     SENSOR = 'color'
-
-#     # Combine training sets of all actions for one object
-#     TOOL_NAMES = ['hook', 'ruler', 'spatula', 'sshot']
-#     ACTIONS = ['left_to_right', 'pull', 'push', 'right_to_left']
-#     OBJECT_NAMES = ['0_woodenCube', '1_pearToy', '2_yogurtYellowbottle', '3_cowToy', '4_tennisBallYellowGreen',
-#                 '5_blackCoinbag', '6_lemonSodaCan', '7_peperoneGreenToy', '8_boxEgg','9_pumpkinToy',
-#                 '10_tomatoCan', '11_boxMilk', '12_containerNuts', '13_cornCob', '14_yellowFruitToy',
-#                 '15_bottleNailPolisher', '16_boxRealSense', '17_clampOrange', '18_greenRectangleToy', '19_ketchupToy']
-
-#     datasets = get_datasets_for_combinations(BASE_PATH, OBJECT_NAMES, TOOL_NAMES, ACTIONS, SENSOR, set_name)
-#     combined_dataset = ConcatDataset(datasets)
-#     loader = DataLoader(dataset=combined_dataset, batch_size=32, shuffle=True)
-
-#     return loader
 
 def visualize_reconstruction(model, test_loader, num_samples=5):
     """
@@ -334,6 +305,7 @@ def train_cae(cae, loader, num_epochs=5, lr=1e-3, device="cuda"):
 
             # Accumulate the loss for reporting.
             running_loss += loss.item()
+            print(f"Batch Loss: {loss:.4f}")
 
         # Calculate the average loss for this epoch.
         avg_loss = running_loss / len(loader)
@@ -341,24 +313,69 @@ def train_cae(cae, loader, num_epochs=5, lr=1e-3, device="cuda"):
         # Print the epoch's summary. The loss is averaged over all batches to get a sense of performance over the entire dataset.
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {avg_loss:.4f}")
 
-def calculate_accuracy(outputs, labels):
+def validate_cae(cae, loader, device="cuda"):
     """
-    Calculate the accuracy of the predictions based on the maximum scoring class (index) in outputs.
+    This function evaluates a convolutional autoencoder (CAE) on the validation set.
 
     Parameters:
-    outputs (torch.Tensor): The model outputs (raw scores or probabilities for each class).
-    labels (torch.Tensor): The ground truth labels.
+    cae (nn.Module): The autoencoder model to be evaluated.
+    loader (DataLoader): DataLoader that provides batches of validation data.
+    device (str): The device type to be used for evaluation (e.g., "cuda" or "cpu").
 
     Returns:
-    float: The accuracy of the predictions.
+    float: The average validation loss over all batches in the validation set.
     """
-    _, predicted = outputs.max(1)  # Get the indices of the max values (predicted classes).
-    correct = (predicted == labels).sum().item()  # Count how many predictions matched the labels.
-    return correct / labels.size(0)  # Calculate accuracy.
+    # Define the loss function as Mean Squared Error Loss. It's common for reconstruction tasks.
+    criterion = nn.MSELoss()
 
-def validate_model(model, criterion, data_loader, device):
+    # Set the model to evaluation mode. This deactivates layers like dropout and batch normalization.
+    cae.eval()
+
+    # Initialize the running loss to zero.
+    validation_loss = 0.0
+
+    # We do not need to compute gradients for evaluation, so we use torch.no_grad() to prevent PyTorch from using memory to track tensors for autograd.
+    with torch.no_grad():
+        # Iterate over the DataLoader for the validation data.
+        for batch in loader:
+            # Unpack the batch. We're not interested in labels since autoencoders are unsupervised.
+            images, _ = batch
+            images = images.to(device)
+
+            # Prepare the images for input into the model by ensuring the data type and structure are correct.
+            images = images.float()
+            images = images.squeeze(1)
+            images = images.permute(0, 3, 1, 2)
+
+            # Forward pass: pass the images through the model to get the reconstructed images.
+            outputs = cae(images)
+
+            # Calculate the loss between the original and the reconstructed images.
+            loss = criterion(outputs, images)
+
+            # Accumulate the loss for reporting.
+            validation_loss += loss.item()
+
+    # Calculate the average loss for the validation set.
+    avg_val_loss = validation_loss / len(loader)
+
+    print("Average Validation Loss:", avg_val_loss)
+
+def calculate_accuracy(output, labels):
+    # Get predictions
+    predicted = output.max(1).indices  # The underscore is used to ignore the actual maximum values returned
+
+    # Check where the predictions and labels are the same
+    correct_predictions = (predicted == labels).sum().item()
+
+    # Calculate accuracy
+    accuracy = correct_predictions / labels.size(0)  # or labels.numel() for the total number of elements
+
+    return accuracy * 100.0  # returns as percentage
+
+def validate_mlp(model, loss_function, val_loader, device):
     """
-    Evaluate the model's performance on the validation set.
+    Evaluate the mlp's performance on the validation set.
 
     Parameters:
     model (nn.Module): The model to evaluate.
@@ -376,20 +393,22 @@ def validate_model(model, criterion, data_loader, device):
     total_samples = 0
 
     with torch.no_grad():  # No need to track gradients for validation.
-        for features, labels in data_loader:
+        for features, labels in val_loader:
             features, labels = features.to(device), labels.to(device)
             outputs = model(features)
-            loss = criterion(outputs, labels)
+
+            loss = loss_function(outputs, labels)
             total_loss += loss.item()
+
             total_correct += (outputs.max(1).indices == labels).sum().item()
             total_samples += labels.size(0)
 
-    avg_loss = total_loss / len(data_loader)
-    accuracy = total_correct / total_samples
+    avg_loss = total_loss / len(val_loader)
+    accuracy = (total_correct / total_samples) * 100.0
 
-    return avg_loss, accuracy
+    print(f"Val Loss: {avg_loss:.4f}, Val Acc: {accuracy:.2f}")
 
-def train_mlp(model, num_epochs, train_loader, val_loader, device="cuda"):
+def train_mlp(model, loss_function, num_epochs, train_loader, device="cuda"):
     """
     Train the MLP model and evaluate its performance on a validation set.
 
@@ -403,7 +422,6 @@ def train_mlp(model, num_epochs, train_loader, val_loader, device="cuda"):
     Returns:
     None: The model is trained in place.
     """
-    criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     for epoch in range(num_epochs):
@@ -413,15 +431,18 @@ def train_mlp(model, num_epochs, train_loader, val_loader, device="cuda"):
         total_train_samples = 0
 
         for features, labels in train_loader:
+            if isinstance(labels, list):
+                labels = labels[1]
+                
             features, labels = features.to(device), labels.to(device)
 
             optimizer.zero_grad()  # Clear previous gradients.
             outputs = model(features)  # Forward pass.
-            loss = criterion(outputs, labels)  # Compute loss.
+            loss = loss_function(outputs, labels)  # Compute loss.
             loss.backward()  # Backward pass.
             optimizer.step()  # Update weights.
-
             running_loss += loss.item()
+
             total_train_correct += (outputs.max(1).indices == labels).sum().item()
             total_train_samples += labels.size(0)
 
@@ -429,215 +450,10 @@ def train_mlp(model, num_epochs, train_loader, val_loader, device="cuda"):
         avg_train_loss = running_loss / len(train_loader)
         train_accuracy = total_train_correct / total_train_samples
 
-        # Validate the model after each epoch.
-        avg_val_loss, val_accuracy = validate_model(model, criterion, val_loader, device)
-
         print(f"Epoch [{epoch+1}/{num_epochs}], "
-              f"Train Loss: {avg_train_loss:.4f}, Train Acc: {train_accuracy:.2f}, "
-              f"Val Loss: {avg_val_loss:.4f}, Val Acc: {val_accuracy:.2f}")
-
-# def train_cae(model, loader, num_epochs=5, lr=1e-3):
-#     criterion = nn.MSELoss()
-#     optimizer = torch.optim.Adam(model.parameters(), lr)
-
-#     for epoch in range(num_epochs):
-#         for batch in loader:
-#             images, _ = batch  # We don't need labels for autoencoders
-#             images = images.float() # Model expects float
-#             images = images.squeeze(1)  # Remove the dimension with size 1
-#             images = images.permute(0, 3, 1, 2)   # Move the channels dimension to the correct position
-#             outputs = model(images)
-#             loss = criterion(outputs, images)  # Reconstruction loss
-#             optimizer.zero_grad()
-#             loss.backward()
-#             optimizer.step()
-#         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
-
-# def get_batch_total_correct(outputs, labels):
-#     """
-#     This function calculates the accuracy of predictions for a batch of data. 
-#     Accuracy is defined as the percentage of correct predictions from all predictions made.
-
-#     Parameters:
-#     outputs (torch.Tensor): The model predictions. Each output is a set of probabilities across all classes, 
-#                             essentially telling us how likely each class is, according to the model.
-#     labels (torch.Tensor): The actual truth labels against which the predictions are compared.
-
-#     Returns:
-#     float: The accuracy percentage of correct predictions.
-#     """
-#     _, predicted_indices = outputs.max(1)  # Get the indices of the max log-probability (predicted classes).
-#     correct = predicted_indices.eq(labels).sum().item()  # Compare with true labels to count correct predictions.
-#     total = labels.size(0)  # Total number of labels, which is the total number of predictions in this batch.
-#     return correct, total
-
-# def validate_model(model, criterion, val_loader, device):
-#     """
-#     Evaluate the model's performance on the validation set. The function calculates the average loss and accuracy 
-#     over the validation set without making any adjustments to the model itself (as it's not training).
-
-#     Parameters:
-#     model (nn.Module): The neural network model.
-#     criterion (nn.Module): The loss function.
-#     val_loader (DataLoader): DataLoader for the validation set.
-#     device (str): The computing device where operations will take place.
-
-#     Returns:
-#     float, float: The average loss and accuracy on the validation set, respectively.
-#     """
-#     model.eval()  # Set the model to evaluation mode.
-
-#     val_loss = 0.0
-#     correct = 0
-#     total = 0
-
-#     with torch.no_grad():  # No need to track gradients for validation, saving memory and computations.
-#         for features, labels in val_loader:
-#             features, labels = features.to(device), labels.to(device)
-
-#             outputs = model(features)  # Get model predictions.
-
-#             loss = criterion(outputs, labels)  # Calculate loss between predicted outputs and actual labels.
-#             val_loss += loss.item()  # Accumulate the validation loss.
-
-#             batch_correct, batch_total = get_batch_total_correct(outputs, labels)  # Consistent method to count correct predictions.
-#             correct += batch_correct  # Accumulate correct predictions.
-#             total += batch_total  # Accumulate total predictions.
-
-#     avg_val_loss = val_loss / len(val_loader)  # Average loss.
-#     val_accuracy = 100. * correct / total  # Accuracy percentage.
-
-#     return avg_val_loss, val_accuracy
-
-
-# def train_mlp(mlp, num_epochs, train_loader, val_loader, device="cuda"):
-#     """
-#     This function trains a Multilayer Perceptron (MLP) model.
-
-#     Parameters:
-#     mlp (nn.Module): The MLP model to be trained.
-#     num_epochs (int): The number of training epochs.
-#     train_loader (DataLoader): DataLoader for the training set.
-#     val_loader (DataLoader): DataLoader for the validation set.
-#     device (str): The device where the model and data should be loaded ('cpu' or 'cuda').
-
-#     Returns:
-#     None: The function trains the model in place and does not return anything.
-#     """
-
-#     # Define the loss function. CrossEntropyLoss is commonly used for classification tasks.
-#     criterion = nn.CrossEntropyLoss()
-
-#     # Define the optimizer, specifying the learning rate and the parameters to optimize.
-#     # Adam is a commonly used optimizer due to its efficiency and minimal requirement for manual tuning.
-#     optimizer = torch.optim.Adam(mlp.parameters(), lr=0.001)
-
-#     # Iterate over the dataset multiple times (each iteration over the entire dataset is called an epoch).
-#     for epoch in range(num_epochs):
-#         # Set the model to training mode. This activates layers like dropout and batch normalization.
-#         mlp.train()
-
-#         # Initialize the running loss to zero at the beginning of each epoch.
-#         running_loss = 0.0
-
-#         # Iterate over the DataLoader for the training set.
-#         for features, labels in train_loader:
-#             # Move data to the specified device (if not already there).
-#             features, labels = features.to(device), labels.to(device)
-
-#             # Forward pass: pass the input through the model to get the predictions.
-#             outputs = mlp(features)
-
-#             # Calculate the loss by comparing the model output and actual labels.
-#             loss = criterion(outputs, labels)
-
-#             # Zero the parameter gradients to prevent accumulation during backpropagation.
-#             optimizer.zero_grad()
-
-#             # Backward pass: compute the gradients of the loss w.r.t. the model parameters.
-#             loss.backward()
-
-#             # Update the model parameters based on the computed gradients.
-#             optimizer.step()
-
-#             # Accumulate the loss for reporting.
-#             running_loss += loss.item()
-
-#         # Calculate the average loss for this epoch.
-#         avg_train_loss = running_loss / len(train_loader)
-
-#         # Validation phase: we evaluate the model on the validation set to check its performance on unseen data.
-#         mlp.eval()  # Set the model to evaluation mode.
-
-#         val_loss = 0.0
-#         correct = 0
-#         total = 0
-
-#         # We do not need to calculate gradients for evaluation, so we use torch.no_grad() to prevent PyTorch from using memory to track tensors for autograd.
-#         with torch.no_grad():
-#             for features, labels in val_loader:
-#                 features, labels = features.to(device), labels.to(device)
-
-#                 # Forward pass: pass the input through the model to get the predictions.
-#                 outputs = mlp(features)
-
-#                 # Calculate the loss by comparing the model output and actual labels.
-#                 loss = criterion(outputs, labels)
-
-#                 # Accumulate the validation loss.
-#                 val_loss += loss.item()
-
-#                 # Calculate the number of correct predictions.
-#                 _, predicted = outputs.max(1)
-#                 total += labels.size(0)
-#                 correct += predicted.eq(labels).sum().item()
-
-#         # Calculate the average validation loss and the accuracy over the entire validation set.
-#         avg_val_loss = val_loss / len(val_loader)
-#         val_accuracy = 100. * correct / total
-
-#         # Print the summary for this epoch.
-#         print(f"Epoch [{epoch+1}/{num_epochs}], "
-#               f"Loss: {avg_train_loss:.4f}, "
-#               f"Val Loss: {avg_val_loss:.4f}, "
-#               f"Val Acc: {val_accuracy:.2f}%")
-
-# def train_mlp(mlp, num_epochs, train_loader, val_loader, device="cpu"):
-#     # Loss and optimizer
-#     criterion = nn.CrossEntropyLoss()
-#     optimizer = torch.optim.Adam(mlp.parameters(), lr=0.001)
-
-#     # Training loop
-#     for epoch in range(num_epochs):
-#         mlp.train()
-#         for features, labels in train_loader:
-#             #features, labels = features.to(device), labels.to(device)
-            
-#             # Forward pass
-#             outputs = mlp(features)
-#             loss = criterion(outputs, labels)
-            
-#             # Backward pass and optimization
-#             optimizer.zero_grad()
-#             loss.backward()
-#             optimizer.step()
+              f"Train Loss: {avg_train_loss:.4f}, Train Acc: {train_accuracy:.2f}")
         
-#         # Validation
-#         mlp.eval()
-#         val_loss = 0.0
-#         correct = 0
-#         total = 0
-#         with torch.no_grad():
-#             for features, labels in val_loader:
-#                 features, labels = features.to(device), labels.to(device)
-#                 outputs = mlp(features)
-#                 loss = criterion(outputs, labels)
-#                 val_loss += loss.item()
-#                 _, predicted = outputs.max(1)
-#                 total += labels.size(0)
-#                 correct += predicted.eq(labels).sum().item()
-        
-#         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}, Val Loss: {val_loss/len(val_loader):.4f}, Val Acc: {100. * correct / total:.2f}%")
+    return model
 
 def extract_features(loaded_ae, loader, device="cuda"):
     """
@@ -696,39 +512,3 @@ def extract_features(loaded_ae, loader, device="cuda"):
     all_labels = torch.cat(labels_list, dim=0)
 
     return all_features, all_labels
-
-
-# OLD
-# def extract_features(loaded_ae, loader, device="cpu"):
-#     loaded_ae.eval()
-#     features_list = []
-#     labels_list = []
-    
-#     with torch.no_grad():
-#         for batch in loader:
-#             images, labels = batch
-            
-#             # Check the size of the input
-#             print(len(images), len(labels[1]))
-
-#             images = images.float() # Model expects float
-#             images = images.squeeze(1)  # Remove the dimension with size 1
-#             images = images.permute(0, 3, 1, 2)  # Move the channels dimension to the correct position [batch_size, channels, height, width]
-#             features = loaded_ae.encoder(images)
-
-#             # Batch features shape
-#             print("Batch features shape:", features.shape)
-
-#             features_list.append(features.reshape(features.size(0), -1)) # What is happening here?
-#             #features_list.append(features)
-
-#             print("Batch labels shape:", labels[1].shape)
-#             labels_list.append(labels[1]) # 0: Tools, 1: Actions
-
-#     f_list = torch.cat(features_list, dim=0)
-#     l_list = torch.cat(labels_list, dim=0)
-
-#     # print("Concat Features List shape:", f_list.shape)
-#     # print("Concat Labels List shape:", l_list.shape)
-
-#     return f_list, l_list

@@ -27,21 +27,32 @@ class MLP(nn.Module):
 
         return x
 
-# class MLP(nn.Module):
-#     def __init__(self, input_dim, output_dim):
-#         super(MLP, self).__init__()
-#         self.fc = nn.Sequential(
-#             nn.Linear(input_dim, 512),
-#             nn.ReLU(),
-#             nn.Dropout(0.5),
-#             nn.Linear(512, 256),
-#             nn.ReLU(),
-#             nn.Dropout(0.5),
-#             nn.Linear(256, output_dim)
-#         )
-        
-#     def forward(self, x):
-#         return self.fc(x)
+class SimpleCAE(nn.Module):
+    def __init__(self):
+        super(SimpleCAE, self).__init__()
+
+        # Simplified Encoder
+        self.encoder = nn.Sequential(
+            nn.Conv2d(3, 12, kernel_size=4, stride=2, padding=1),  # [batch, 12, 128, 96] assuming input is [batch, 3, 256, 192]
+            nn.ReLU(),
+            nn.Conv2d(12, 24, kernel_size=4, stride=2, padding=1),  # [batch, 24, 64, 48]
+            nn.ReLU(),
+            # You can continue to add more layers here if needed
+        )
+
+        # Simplified Decoder
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(24, 12, kernel_size=4, stride=2, padding=1),  # [batch, 12, 128, 96]
+            nn.ReLU(),
+            nn.ConvTranspose2d(12, 3, kernel_size=4, stride=2, padding=1),  # [batch, 3, 256, 192]
+            nn.Sigmoid()  # Sigmoid because we are probably dealing with images (normalized to [0, 1])
+        )
+
+    def forward(self, x):
+        x = self.encoder(x)  # Encode the input
+        x = self.decoder(x)  # Decode the encoded representation
+        return x  # Return the reconstructed output
+
 
 class CAE(nn.Module):
     def __init__(self):
