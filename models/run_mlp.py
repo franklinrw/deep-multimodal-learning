@@ -1,8 +1,9 @@
 import torch
-from functions import extract_features, get_dummy_loader, train_mlp, get_loaders, validate_mlp
-from models import CAE, MLP
-from torch.utils.data import TensorDataset, DataLoader
+from functions import get_loaders, extract_features
+from functions_mlp import MLP, train_mlp, validate_mlp
+from functions_cae import CAE
 import torch.nn as nn
+from torch.utils.data import TensorDataset, DataLoader
 
 # Check if CUDA is available
 DEVICE = ""

@@ -99,6 +99,5 @@ def main():
             print(f"Processing of {objectname} done")
             data_sets = initialize_data_sets()
 
-
 if __name__ == '__main__':
     main()

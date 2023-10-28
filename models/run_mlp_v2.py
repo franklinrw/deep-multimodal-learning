@@ -1,6 +1,7 @@
 import torch
-from functions import get_loaders, train_mlp, validate_mlp, extract_features
-from models import MLP, CAE
+from functions import get_loaders, extract_features
+from functions_mlp import rawMLP, train_mlp, validate_mlp
+from functions_cae import CAE
 import torch.nn as nn
 
 # Check if CUDA is available
@@ -50,7 +51,7 @@ output_dim = 4  # It will always be 4 and or otherwise 16
 print("Input Dim:", input_dim)
 print("Output Dim:", output_dim)
 
-mlp_model = MLP(input_dim, output_dim).to(DEVICE)
+mlp_model = rawMLP(input_dim, output_dim).to(DEVICE)
 
 # Train the model
 train_mlp(mlp_model, LF, NUM_EPOCHS, train_loader, DEVICE)
