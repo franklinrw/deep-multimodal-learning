@@ -76,8 +76,6 @@ def validate_mlp(model, loss_function, val_loader, device):
 
     with torch.no_grad():  # No need to track gradients for validation.
         for features, labels in val_loader:
-            if isinstance(labels, list):
-                labels = labels[1]
             features, labels = features.to(device), labels.to(device)
             print(labels)
             outputs = model(features)
@@ -116,7 +114,6 @@ def train_mlp(model, loss_function, num_epochs, train_loader, device="cuda"):
         total_train_samples = 0
 
         for features, labels in train_loader:
-            labels = labels[1]
                 
             features, labels = features.to(device), labels.to(device)
 

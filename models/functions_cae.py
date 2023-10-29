@@ -106,7 +106,7 @@ def train_cae(cae, loader, num_epochs=5, lr=1e-3, device="cuda"):
             images, _ = batch
             images = images.to(device)
 
-            print(images)
+            #print(images)
 
             # Prepare the images for input into the model by ensuring the data type and structure are correct.
             images = images.float()
@@ -116,7 +116,7 @@ def train_cae(cae, loader, num_epochs=5, lr=1e-3, device="cuda"):
             # Forward pass: pass the images through the model to get the reconstructed images.
             outputs = cae(images)
 
-            print(outputs)
+            #print(outputs)
 
             # Calculate the loss between the original and the reconstructed images.
             loss = criterion(outputs, images)

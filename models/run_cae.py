@@ -34,10 +34,10 @@ train_loader = get_loader(BASE_PATH, train_objects, TOOL_NAMES, ACTIONS, "color"
 val_loader = get_loader(BASE_PATH, val_objects, TOOL_NAMES, ACTIONS, "color", "validation", batch_size=8)
 
 # Training loop
-# model = CAE().to(device)
-model = SimpleCAE().to(device)
+model = CAE().to(device)
+#model = SimpleCAE().to(device)
 train_cae(model, train_loader, NUM_EPOCHS, LR_RATE, device)
 validate_cae(model, val_loader, device)
 
-model_path = "C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/weights/simple-cae.pth"
+model_path = "C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/weights/cae.pth"
 torch.save(model.state_dict(), model_path)
