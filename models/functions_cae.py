@@ -2,6 +2,32 @@ import torch.nn.functional as F
 import torch
 import torch.nn as nn
 
+class SimpleCAE(nn.Module):
+    def __init__(self):
+        super(SimpleCAE, self).__init__()
+
+        # Simplified Encoder
+        self.encoder = nn.Sequential(
+            nn.Conv2d(3, 12, kernel_size=4, stride=2, padding=1),  # [batch, 12, 128, 96] assuming input is [batch, 3, 256, 192]
+            nn.ReLU(),
+            nn.Conv2d(12, 24, kernel_size=4, stride=2, padding=1),  # [batch, 24, 64, 48]
+            nn.ReLU(),
+            # You can continue to add more layers here if needed
+        )
+
+        # Simplified Decoder
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(24, 12, kernel_size=4, stride=2, padding=1),  # [batch, 12, 128, 96]
+            nn.ReLU(),
+            nn.ConvTranspose2d(12, 3, kernel_size=4, stride=2, padding=1),  # [batch, 3, 256, 192]
+            nn.Sigmoid()  # Sigmoid because we are probably dealing with images (normalized to [0, 1])
+        )
+
+    def forward(self, x):
+        x = self.encoder(x)  # Encode the input
+        x = self.decoder(x)  # Decode the encoded representation
+        return x  # Return the reconstructed output
+
 class CAE(nn.Module):
     def __init__(self):
         super(CAE, self).__init__()
@@ -47,7 +73,6 @@ class CAE(nn.Module):
         x = self.decoder(x)
         return x
 
-
 def train_cae(cae, loader, num_epochs=5, lr=1e-3, device="cuda"):
     """
     This function trains a convolutional autoencoder (CAE).
@@ -81,6 +106,8 @@ def train_cae(cae, loader, num_epochs=5, lr=1e-3, device="cuda"):
             images, _ = batch
             images = images.to(device)
 
+            print(images)
+
             # Prepare the images for input into the model by ensuring the data type and structure are correct.
             images = images.float()
             images = images.squeeze(1)
@@ -88,6 +115,8 @@ def train_cae(cae, loader, num_epochs=5, lr=1e-3, device="cuda"):
 
             # Forward pass: pass the images through the model to get the reconstructed images.
             outputs = cae(images)
+
+            print(outputs)
 
             # Calculate the loss between the original and the reconstructed images.
             loss = criterion(outputs, images)

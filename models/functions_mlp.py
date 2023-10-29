@@ -79,6 +79,7 @@ def validate_mlp(model, loss_function, val_loader, device):
             if isinstance(labels, list):
                 labels = labels[1]
             features, labels = features.to(device), labels.to(device)
+            print(labels)
             outputs = model(features)
 
             loss = loss_function(outputs, labels)
@@ -115,10 +116,11 @@ def train_mlp(model, loss_function, num_epochs, train_loader, device="cuda"):
         total_train_samples = 0
 
         for features, labels in train_loader:
-            if isinstance(labels, list):
-                labels = labels[1]
+            labels = labels[1]
                 
             features, labels = features.to(device), labels.to(device)
+
+            print(labels)
 
             optimizer.zero_grad()  # Clear previous gradients.
             outputs = model(features)  # Forward pass.

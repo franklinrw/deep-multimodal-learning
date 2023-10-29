@@ -1,5 +1,5 @@
 import torch
-from functions import get_loaders, extract_features
+from functions import get_loader, extract_features
 from functions_mlp import rawMLP, train_mlp, validate_mlp
 from functions_cae import CAE
 import torch.nn as nn
@@ -15,13 +15,28 @@ LF = nn.CrossEntropyLoss()  # Loss function
 # Flag to switch between using CAE features or raw data
 USE_CAE_FEATURES = False  # Set to True if you want to use CAE features
 
+BASE_PATH = 'C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/data_v2'
+
+# Define the tool names and actions
+TOOL_NAMES = ['hook', 'ruler', 'spatula', 'sshot']
+ACTIONS = ['left_to_right', 'pull', 'push', 'right_to_left']
+
+# All available object names
+train_objects = ['0_woodenCube', '1_pearToy', '2_yogurtYellowbottle', '3_cowToy', '4_tennisBallYellowGreen',
+            '5_blackCoinbag', '6_lemonSodaCan', '7_peperoneGreenToy', '8_boxEgg','9_pumpkinToy',
+            '10_tomatoCan', '11_boxMilk']
+
+val_objects = ['12_containerNuts', '13_cornCob', '14_yellowFruitToy',
+            '15_bottleNailPolisher']
+
+train_loader = get_loader(BASE_PATH, train_objects, TOOL_NAMES, ACTIONS, "color", "training", batch_size=8)
+val_loader = get_loader(BASE_PATH, val_objects, TOOL_NAMES, ACTIONS, "color", "validation", batch_size=8)
+
 if USE_CAE_FEATURES:
     # Load CAE model and extract features
     model_path = "path_to_your_CAE_model"  # please set the correct path
     loaded_cae = CAE()
     loaded_cae.load_state_dict(torch.load(model_path))
-
-    train_loader, val_loader, _ = get_loaders("color", BATCH_SIZE)
 
     # Extract features from the train and validation sets
     train_features, train_labels = extract_features(loaded_cae, train_loader)
@@ -38,7 +53,6 @@ if USE_CAE_FEATURES:
     input_dim = train_features.size(1)  # input dimension from CAE features
 else:
     # Use raw data
-    train_loader, val_loader, _ = get_loaders("color", BATCH_SIZE)
     # Here, you need to specify the correct input dimension of your raw data
     # images, labels = next(iter(train_loader))
     # images = images.float() # Model expects float

@@ -9,99 +9,52 @@ import numpy as np
 import random
 
 class CustomDataset(Dataset):
-    """
-    A custom Dataset class that loads data and labels from pickle files for each combination of parameters.
-
-    This class is particularly useful for machine learning tasks where data is stored in a structured directory
-    and needs to be loaded into memory in chunks due to the size of the dataset.
-
-    Attributes:
-    data (list or ndarray): The data loaded from the pickle file.
-    labels (list or ndarray): The labels corresponding to the data.
-    """
-
-    def __init__(self, base_path, objectname, toolname, action, sensor, set_name):
+    def __init__(self, file_path):
         """
-        Initializes the CustomDataset with the paths and loads the data.
+        Initializes the CustomDataset with the file path and loads the data.
 
         Parameters:
-        base_path (str): The base directory where the datasets are located.
-        objectname (str): The name of the object category.
-        toolname (str): The name of the tool category.
-        action (str): The type of action.
-        sensor (str): The type of sensor data.
-        set_name (str): The name of the dataset (e.g., 'train', 'test', 'validation').
+        file_path (str): The full path to the pickle file containing the data.
         """
+        self.data_with_labels = []
 
-        # Construct the full path for the data and label files.
-        data_file_path = os.path.join(base_path, objectname, toolname, action, sensor, f"{set_name}.pkl")
-        labels_file_path = os.path.join(base_path, objectname, toolname, action, sensor, f"y_{set_name}.pkl")
-
-        # Load data and labels from the pickle files.
-        # It's a good practice to handle file reading errors, which might occur if the file doesn't exist.
+        # Load data and labels from the pickle file.
         try:
-            with open(data_file_path, 'rb') as f:
-                self.data = pickle.load(f)
+            with open(file_path, 'rb') as f:
+                self.data_with_labels = pickle.load(f)
         except FileNotFoundError:
-            print(f"Data file not found: {data_file_path}")
-            self.data = []
-
-        try:
-            with open(labels_file_path, 'rb') as f:
-                self.labels = pickle.load(f)
-        except FileNotFoundError:
-            print(f"Labels file not found: {labels_file_path}")
-            self.labels = []
+            print(f"Data file not found: {file_path}")
 
     def __len__(self):
         """
         Returns the total number of samples in the dataset.
-
-        This method is required by PyTorch and allows the dataset to be used with torch.utils.data.DataLoader.
         """
-        return len(self.data)
+        return len(self.data_with_labels)
 
     def __getitem__(self, idx):
         """
         Retrieves the data and its corresponding label at a given index.
-
-        This method is required by PyTorch and allows the dataset to be used with torch.utils.data.DataLoader.
-
-        Parameters:
-        idx (int): The index of the data to retrieve.
-
-        Returns:
-        sample (ndarray or any): The data at the given index.
-        label (ndarray or any): The label corresponding to the sample.
         """
-
-        # It's a good practice to handle index errors when retrieving data by index.
         try:
-            sample = self.data[idx]
-            label = self.labels[idx]
+            sample, label = self.data_with_labels[idx]
         except IndexError:
             print(f"Index {idx} out of range")
-            # Return empty data and label, or alternatively, you could return None, None.
-            sample, label = [], []
+            sample, label = None, None  # Or handle this appropriately
 
         return sample, label
-
+    
 def get_datasets(base_path, objectnames, toolnames, actions, sensor, set_name):
     """
-    This function generates a list of CustomDataset instances for each combination of parameters provided.
-    It is useful for creating datasets that need to be loaded for training/testing in machine learning models,
-    especially when dealing with multimodal data or experiments that require various combinations of inputs.
+    This function generates a list of CustomDataset instances for each pickle file in the directory structure.
+    It is useful for creating datasets that need to be loaded for training/testing in machine learning models.
 
     Parameters:
     base_path (str): The base directory where the datasets are located.
-    objectnames (list of str): List of object names to be included in the dataset combinations.
-    toolnames (list of str): List of tool names to be included in the dataset combinations.
-    actions (list of str): List of actions to be included in the dataset combinations.
-    sensor (str): The type of sensor data to be included (e.g., 'color', 'depth', etc.).
     set_name (str): The name of the dataset (e.g., 'train', 'test', 'validation').
+    sensors (list of str): List of sensors to be included in the dataset.
 
     Returns:
-    datasets (list of CustomDataset): A list of CustomDataset instances for each specified combination.
+    datasets (ConcatDataset): A concatenated dataset comprising all the CustomDataset instances.
     """
 
     # Initialize an empty list to store the datasets.
@@ -111,99 +64,26 @@ def get_datasets(base_path, objectnames, toolnames, actions, sensor, set_name):
     for objectname in objectnames:
         for toolname in toolnames:
             for action in actions:
-                # For each combination, create a new instance of CustomDataset.
-                # CustomDataset is assumed to be a class defined elsewhere that loads a specific dataset.
-                dataset = CustomDataset(
-                    base_path=base_path, 
-                    objectname=objectname, 
-                    toolname=toolname, 
-                    action=action, 
-                    sensor=sensor, 
-                    set_name=set_name
-                )
+                # \Bureaublad\ARC\deep-multimodal-learning\data_v2\0_woodenCube\hook\left_to_right\color
+                path = os.path.join(base_path, objectname, toolname, action, sensor, f"{set_name}_{sensor}.pkl")
+                
+                # Check if the path exists
+                if not os.path.exists(path):
+                    print(f"Directory does not exist: {path}")
+                    continue
 
-                # Add the newly created dataset to the list.
+                dataset = CustomDataset(file_path=path)
                 datasets.append(dataset)
 
-    # Return concatenated datasets of the CustomDataset
+    # Return a ConcatDataset instance comprising all the datasets
     return ConcatDataset(datasets)
 
-def get_dummy_loader():
-    BASE_PATH = 'C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/data'
-    SENSOR = 'color'
+def get_loader(base_path, objectnames, toolnames, actions, sensor, set_name, batch_size=8):
 
-    # Combine training sets of all actions for one object
-    TOOL_NAMES = ['spatula']
-    ACTIONS = ['pull']
-    OBJECT_NAMES = ['0_woodenCube', '1_pearToy', '2_yogurtYellowbottle']
-
-    datasets = get_datasets(BASE_PATH, OBJECT_NAMES, TOOL_NAMES, ACTIONS, SENSOR, 'training')
-    # concatenates the data and labels?
-    combined_dataset = ConcatDataset(datasets)
-    loader = DataLoader(dataset=combined_dataset, batch_size=3, shuffle=True)
+    dataset = get_datasets(base_path, objectnames, toolnames, actions, sensor, set_name)
+    loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=(set_name == 'training'))
 
     return loader
-
-def shuffle_and_split_object_names(object_names, train_ratio, val_ratio, test_ratio):
-    """
-    Shuffles and splits object names into training, validation, and test sets.
-
-    :param object_names: List of object names.
-    :param train_ratio: Proportion of object names to include in the training set.
-    :param val_ratio: Proportion of object names to include in the validation set.
-    :param test_ratio: Proportion of object names to include in the test set.
-    :return: Three lists containing the object names for the training, validation, and test sets.
-    """
-    # Ensure the ratios are correct
-    assert train_ratio + val_ratio + test_ratio == 1.0, "Ratios must add up to 1.0"
-
-    # Shuffle the object names
-    random.shuffle(object_names)
-
-    # Calculate split indices
-    total_objects = len(object_names)
-    train_end_idx = int(total_objects * train_ratio)
-    val_end_idx = train_end_idx + int(total_objects * val_ratio)
-
-    # Split the object names
-    train_objects = object_names[:train_end_idx]
-    val_objects = object_names[train_end_idx:val_end_idx]
-    test_objects = object_names[val_end_idx:]
-
-    return train_objects, val_objects, test_objects
-
-def get_loaders(sensor="color", batch_size=8):
-    BASE_PATH = 'C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/data'
-
-    # Define the tool names and actions
-    TOOL_NAMES = ['hook', 'ruler', 'spatula', 'sshot']
-    ACTIONS = ['left_to_right', 'pull', 'push', 'right_to_left']
-
-    # All available object names
-    OBJECT_NAMES = ['0_woodenCube', '1_pearToy', '2_yogurtYellowbottle', '3_cowToy', '4_tennisBallYellowGreen',
-                '5_blackCoinbag', '6_lemonSodaCan', '7_peperoneGreenToy', '8_boxEgg','9_pumpkinToy',
-                '10_tomatoCan', '11_boxMilk', '12_containerNuts', '13_cornCob', '14_yellowFruitToy',
-                '15_bottleNailPolisher', '16_boxRealSense', '17_clampOrange', '18_greenRectangleToy', '19_ketchupToy']
-
-    # Ratios for splitting the datasets
-    TRAIN_RATIO = 0.6
-    VAL_RATIO = 0.2
-    TEST_RATIO = 0.2  # This is calculated but explicitly defining for clarity
-
-    # Shuffle and split the object names
-    train_objects, val_objects, test_objects = shuffle_and_split_object_names(OBJECT_NAMES, TRAIN_RATIO, VAL_RATIO, TEST_RATIO)
-
-    # Get datasets for the selected combinations
-    train_dataset = get_datasets(BASE_PATH, train_objects, TOOL_NAMES, ACTIONS, sensor, "training")
-    val_dataset = get_datasets(BASE_PATH, val_objects, TOOL_NAMES, ACTIONS, sensor, "validation")
-    test_dataset = get_datasets(BASE_PATH, test_objects, TOOL_NAMES, ACTIONS, sensor, "testing")
-
-    # Create the dataloader for all sets
-    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=True)
-
-    return train_loader, val_loader, test_loader
 
 def visualize_reconstruction(model, test_loader, num_samples=5):
     """

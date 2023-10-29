@@ -1,6 +1,8 @@
 /config.txt
 /mvae
 /data
+/data_v2
+/weights
 /__pycache__
 *.code-workspace
 *.png
