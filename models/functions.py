@@ -85,51 +85,6 @@ def get_loader(base_path, objectnames, toolnames, actions, sensor, set_name, bat
 
     return loader
 
-def visualize_reconstruction(model, test_loader, num_samples=5):
-    """
-    Visualize the original and reconstructed images from the test set.
-    
-    Parameters:
-    - model: The trained CAE model.
-    - test_loader: DataLoader for the test set.
-    - num_samples: Number of samples to visualize.
-    """
-    model.eval()  # Set the model to evaluation mode
-    with torch.no_grad():
-        # Get a batch of test data
-        images, _ = next(iter(test_loader))
-        
-        # Move images to the device
-        images = images.float() # Model expects float
-        images = images.squeeze(1)  # Remove the dimension with size 1
-        images = images.permute(0, 3, 1, 2)   # Move the channels dimension to the correct position
-        
-        # Get the model's reconstructions
-        reconstructions = model(images)
-        
-        # Move images and reconstructions to CPU for visualization
-        images = images.cpu().numpy()
-        reconstructions = reconstructions.cpu().numpy()
-        
-        # Plot the original and reconstructed images
-        fig, axes = plt.subplots(nrows=2, ncols=num_samples, figsize=(15, 5))
-        
-        for i in range(num_samples):
-            # Original images
-            ax = axes[0, i]
-            ax.imshow(np.transpose(images[i], (1, 2, 0)))
-            ax.set_title("Original")
-            ax.axis('off')
-            
-            # Reconstructions
-            ax = axes[1, i]
-            ax.imshow(np.transpose(reconstructions[i], (1, 2, 0)))
-            ax.set_title("Reconstruction")
-            ax.axis('off')
-        
-        plt.tight_layout()
-        plt.show()
-
 def calculate_accuracy(output, labels):
     # Get predictions
     predicted = output.max(1).indices  # The underscore is used to ignore the actual maximum values returned
@@ -199,3 +154,49 @@ def extract_features(loaded_ae, loader, device="cuda"):
     all_labels = torch.cat(labels_list, dim=0)
 
     return all_features, all_labels
+
+def visualize_reconstruction(model, test_loader, num_samples=5, device='cuda'):
+    """
+    Visualize the original and reconstructed images from the test set.
+    
+    Parameters:
+    - model: The trained CAE model.
+    - test_loader: DataLoader for the test set.
+    - num_samples: Number of samples to visualize.
+    - device: The device to use ('cuda' or 'cpu').
+    """
+    model.eval()  # Set the model to evaluation mode
+    with torch.no_grad():
+        # Get a batch of test data
+        images, _ = next(iter(test_loader))
+        
+        # Move images to the device
+        images = images.float().to(device)  # Model expects float and move to the specified device
+        images = images.squeeze(1)  # Remove the dimension with size 1
+        images = images.permute(0, 3, 1, 2)   # Move the channels dimension to the correct position
+        
+        # Get the model's reconstructions
+        reconstructions = model(images)
+        
+        # Move images and reconstructions to CPU for visualization
+        images = images.cpu().numpy()
+        reconstructions = reconstructions.cpu().numpy()
+        
+        # Plot the original and reconstructed images
+        fig, axes = plt.subplots(nrows=2, ncols=num_samples, figsize=(15, 5))
+        
+        for i in range(num_samples):
+            # Original images
+            ax = axes[0, i]
+            ax.imshow(np.transpose(images[i], (1, 2, 0)))
+            ax.set_title("Original")
+            ax.axis('off')
+            
+            # Reconstructions
+            ax = axes[1, i]
+            ax.imshow(np.transpose(reconstructions[i], (1, 2, 0)))
+            ax.set_title("Reconstruction")
+            ax.axis('off')
+        
+        plt.tight_layout()
+        plt.show()

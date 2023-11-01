@@ -1,6 +1,7 @@
 import torch.nn.functional as F
 import torch
 import torch.nn as nn
+import numpy as np
 
 class SimpleCAE(nn.Module):
     def __init__(self):
@@ -19,6 +20,40 @@ class SimpleCAE(nn.Module):
         self.decoder = nn.Sequential(
             nn.ConvTranspose2d(24, 12, kernel_size=4, stride=2, padding=1),  # [batch, 12, 128, 96]
             nn.ReLU(),
+            nn.ConvTranspose2d(12, 3, kernel_size=4, stride=2, padding=1),  # [batch, 3, 256, 192]
+            nn.Sigmoid()  # Sigmoid because we are probably dealing with images (normalized to [0, 1])
+        )
+
+    def encode(self, x):
+        return self.encoder(x)
+
+    def forward(self, x):
+        x = self.encoder(x)  # Encode the input
+        x = self.decoder(x)  # Decode the encoded representation
+        return x  # Return the reconstructed output
+
+import torch.nn as nn
+
+class SimpleCAE_Dropout(nn.Module):
+    def __init__(self, dropout_rate=0.5):
+        super(SimpleCAE_Dropout, self).__init__()
+
+        # Simplified Encoder
+        self.encoder = nn.Sequential(
+            nn.Conv2d(3, 12, kernel_size=4, stride=2, padding=1),  # [batch, 12, 128, 96]
+            nn.ReLU(),
+            nn.Dropout(dropout_rate),  # Dropout layer
+            nn.Conv2d(12, 24, kernel_size=4, stride=2, padding=1),  # [batch, 24, 64, 48]
+            nn.ReLU(),
+            nn.Dropout(dropout_rate),  # Dropout layer
+            # You can continue to add more layers here if needed
+        )
+
+        # Simplified Decoder
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(24, 12, kernel_size=4, stride=2, padding=1),  # [batch, 12, 128, 96]
+            nn.ReLU(),
+            nn.Dropout(dropout_rate),  # Dropout layer
             nn.ConvTranspose2d(12, 3, kernel_size=4, stride=2, padding=1),  # [batch, 3, 256, 192]
             nn.Sigmoid()  # Sigmoid because we are probably dealing with images (normalized to [0, 1])
         )
@@ -68,12 +103,15 @@ class CAE(nn.Module):
             nn.Sigmoid()
         )
 
+    def encode(self, x):
+        return self.encoder(x)
+
     def forward(self, x):
         x = self.encoder(x)
         x = self.decoder(x)
         return x
 
-def train_cae(cae, loader, num_epochs=5, lr=1e-3, device="cuda"):
+def train_cae(cae, loader, lossfunction, optimizer, num_epochs=5, lr=1e-3, device="cuda"):
     """
     This function trains a convolutional autoencoder (CAE).
 
@@ -87,10 +125,8 @@ def train_cae(cae, loader, num_epochs=5, lr=1e-3, device="cuda"):
     None: The function trains the model in place and does not return anything.
     """
     # Define the loss function as Mean Squared Error Loss. It's common for reconstruction tasks.
-    criterion = nn.MSELoss()
 
     # Define the optimizer that will be used to minimize the loss. Here, we're using Adam.
-    optimizer = torch.optim.Adam(cae.parameters(), lr=lr)
 
     # Set the model to training mode. This activates layers like dropout and batch normalization.
     cae.train()
@@ -114,12 +150,12 @@ def train_cae(cae, loader, num_epochs=5, lr=1e-3, device="cuda"):
             images = images.permute(0, 3, 1, 2)
 
             # Forward pass: pass the images through the model to get the reconstructed images.
-            outputs = cae(images)
+            outputs = cae.forward(images)
 
             #print(outputs)
 
             # Calculate the loss between the original and the reconstructed images.
-            loss = criterion(outputs, images)
+            loss = lossfunction(outputs, images)
 
             # Zero the parameter gradients to prevent accumulation during backpropagation.
             optimizer.zero_grad()
@@ -140,7 +176,9 @@ def train_cae(cae, loader, num_epochs=5, lr=1e-3, device="cuda"):
         # Print the epoch's summary. The loss is averaged over all batches to get a sense of performance over the entire dataset.
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {avg_loss:.4f}")
 
-def validate_cae(cae, loader, device="cuda"):
+    return cae
+
+def validate_cae(cae, loader, lossfunction, device="cuda"):
     """
     This function evaluates a convolutional autoencoder (CAE) on the validation set.
 
@@ -153,7 +191,6 @@ def validate_cae(cae, loader, device="cuda"):
     float: The average validation loss over all batches in the validation set.
     """
     # Define the loss function as Mean Squared Error Loss. It's common for reconstruction tasks.
-    criterion = nn.MSELoss()
 
     # Set the model to evaluation mode. This deactivates layers like dropout and batch normalization.
     cae.eval()
@@ -175,10 +212,10 @@ def validate_cae(cae, loader, device="cuda"):
             images = images.permute(0, 3, 1, 2)
 
             # Forward pass: pass the images through the model to get the reconstructed images.
-            outputs = cae(images)
+            outputs = cae.forward(images)
 
             # Calculate the loss between the original and the reconstructed images.
-            loss = criterion(outputs, images)
+            loss = lossfunction(outputs, images)
 
             # Accumulate the loss for reporting.
             validation_loss += loss.item()
@@ -187,3 +224,18 @@ def validate_cae(cae, loader, device="cuda"):
     avg_val_loss = validation_loss / len(loader)
 
     print("Average Validation Loss:", avg_val_loss)
+
+def collect_latent_vectors(model, loader, device="cuda"):
+    model.eval()  # Set the model to evaluation mode
+    latent_vectors = []
+    with torch.no_grad():
+        for batch in loader:
+            images, _ = batch
+            images = images.to(device)
+            images = images.float()
+            images = images.squeeze(1)
+            images = images.permute(0, 3, 1, 2)
+            latent_vec = model.encode(images)
+            latent_vec = latent_vec.reshape(latent_vec.size(0), -1)  # Flatten the latent vectors using .reshape()
+            latent_vectors.append(latent_vec.cpu().numpy())
+    return np.concatenate(latent_vectors)
