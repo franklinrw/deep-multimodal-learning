@@ -58,6 +58,9 @@ class SimpleCAE_Dropout(nn.Module):
             nn.Sigmoid()  # Sigmoid because we are probably dealing with images (normalized to [0, 1])
         )
 
+    def encode(self, x):
+        return self.encoder(x)
+
     def forward(self, x):
         x = self.encoder(x)  # Encode the input
         x = self.decoder(x)  # Decode the encoded representation
