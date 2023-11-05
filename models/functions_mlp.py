@@ -1,31 +1,6 @@
 import torch.nn.functional as F
 import torch
 import torch.nn as nn
-
-class MLP(nn.Module):
-    def __init__(self, input_dim, output_dim):
-        super(MLP, self).__init__()
-
-        # It's good practice to define each layer separately in case you need individual layer references
-        # or apply different specific parameters (like different dropout values, batch normalization, etc.)
-        self.fc1 = nn.Linear(input_dim, 512)
-        self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, output_dim)  # Ensure output_dim matches the number of classes
-
-        self.dropout = nn.Dropout(0.5)  # Can adjust the dropout rate if needed
-
-    def forward(self, x):
-        # Apply layer by layer transformations
-        x = F.relu(self.fc1(x))  # ReLU activation for non-linearity
-        x = self.dropout(x)  # Dropout for regularization
-
-        x = F.relu(self.fc2(x))  # ReLU activation for non-linearity
-        x = self.dropout(x)  # Dropout for regularization
-
-        # No activation is used before the output layer with CrossEntropyLoss
-        x = self.fc3(x)  # The network's output are the class scores
-
-        return x
     
 class rawMLP(nn.Module):
     def __init__(self, input_dim, output_dim):
@@ -55,6 +30,79 @@ class rawMLP(nn.Module):
 
         return x
 
+class caeMLP(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(caeMLP, self).__init__()
+
+        # It's good practice to define each layer separately in case you need individual layer references
+        # or apply different specific parameters (like different dropout values, batch normalization, etc.)
+        self.fc1 = nn.Linear(input_dim, 512)
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, output_dim)  # Ensure output_dim matches the number of classes
+
+        self.dropout = nn.Dropout(0.5)  # Can adjust the dropout rate if needed
+
+    def forward(self, x):
+        # Apply layer by layer transformations
+        x = F.relu(self.fc1(x))  # ReLU activation for non-linearity
+        x = self.dropout(x)  # Dropout for regularization
+
+        x = F.relu(self.fc2(x))  # ReLU activation for non-linearity
+        x = self.dropout(x)  # Dropout for regularization
+
+        # No activation is used before the output layer with CrossEntropyLoss
+        x = self.fc3(x)  # The network's output are the class scores
+
+        return x
+    
+def train_mlp(model, loss_function, optimizer, train_loader, num_epochs, device="cuda"):
+    """
+    Train the MLP model and evaluate its performance on a validation set.
+
+    Parameters:
+    model (nn.Module): The MLP model to train.
+    num_epochs (int): Number of epochs to train the model.
+    train_loader (DataLoader): DataLoader for the training set.
+    val_loader (DataLoader): DataLoader for the validation set.
+    device (str): The device to use for training ('cpu' or 'cuda').
+
+    Returns:
+    None: The model is trained in place.
+    """
+
+    epoch_avg_loss = []
+    epoch_train_accuracy = []
+    for epoch in range(num_epochs):
+        model.train() 
+        running_loss = 0.0
+        total_train_correct = 0
+        total_train_samples = 0
+
+        for features, labels in train_loader:
+            features, labels = features.to(device), labels.to(device)
+
+            optimizer.zero_grad()  # Clear previous gradients.
+            outputs = model(features)  # Forward pass.
+            loss = loss_function(outputs, labels)  # Compute loss.
+            loss.backward()  # Backward pass.
+            optimizer.step()  # Update weights.
+            running_loss += loss.item()
+
+            total_train_correct += (outputs.max(1).indices == labels).sum().item()
+            total_train_samples += labels.size(0)
+
+        # Calculate average loss and accuracy over the epoch.
+        avg_train_loss = running_loss / len(train_loader)
+        train_accuracy = total_train_correct / total_train_samples
+
+        epoch_avg_loss.append(avg_train_loss)
+        epoch_train_accuracy.append(train_accuracy)
+
+        print(f"Epoch [{epoch+1}/{num_epochs}], "
+            f"Train Loss: {avg_train_loss:.4f}, Train Acc: {train_accuracy:.2f}")
+        
+    return model, epoch_avg_loss, train_accuracy
+
 def validate_mlp(model, loss_function, val_loader, device):
     """
     Evaluate the mlp's performance on the validation set.
@@ -77,7 +125,6 @@ def validate_mlp(model, loss_function, val_loader, device):
     with torch.no_grad():  # No need to track gradients for validation.
         for features, labels in val_loader:
             features, labels = features.to(device), labels.to(device)
-            print(labels)
             outputs = model(features)
 
             loss = loss_function(outputs, labels)
@@ -90,50 +137,3 @@ def validate_mlp(model, loss_function, val_loader, device):
     accuracy = (total_correct / total_samples) * 100.0
 
     print(f"Val Loss: {avg_loss:.4f}, Val Acc: {accuracy:.2f}")
-
-def train_mlp(model, loss_function, num_epochs, train_loader, device="cuda"):
-    """
-    Train the MLP model and evaluate its performance on a validation set.
-
-    Parameters:
-    model (nn.Module): The MLP model to train.
-    num_epochs (int): Number of epochs to train the model.
-    train_loader (DataLoader): DataLoader for the training set.
-    val_loader (DataLoader): DataLoader for the validation set.
-    device (str): The device to use for training ('cpu' or 'cuda').
-
-    Returns:
-    None: The model is trained in place.
-    """
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-
-    for epoch in range(num_epochs):
-        model.train()  # Set the model to training mode.
-        running_loss = 0.0
-        total_train_correct = 0
-        total_train_samples = 0
-
-        for features, labels in train_loader:
-                
-            features, labels = features.to(device), labels.to(device)
-
-            print(labels)
-
-            optimizer.zero_grad()  # Clear previous gradients.
-            outputs = model(features)  # Forward pass.
-            loss = loss_function(outputs, labels)  # Compute loss.
-            loss.backward()  # Backward pass.
-            optimizer.step()  # Update weights.
-            running_loss += loss.item()
-
-            total_train_correct += (outputs.max(1).indices == labels).sum().item()
-            total_train_samples += labels.size(0)
-
-        # Calculate average loss and accuracy over the epoch.
-        avg_train_loss = running_loss / len(train_loader)
-        train_accuracy = total_train_correct / total_train_samples
-
-        print(f"Epoch [{epoch+1}/{num_epochs}], "
-              f"Train Loss: {avg_train_loss:.4f}, Train Acc: {train_accuracy:.2f}")
-        
-    return model
