@@ -72,13 +72,12 @@ def train_mlp(model, loss_function, optimizer, train_loader, num_epochs, device=
     None: The model is trained in place.
     """
 
-    epoch_avg_loss = []
-    epoch_train_accuracy = []
     for epoch in range(num_epochs):
         model.train() 
         running_loss = 0.0
-        total_train_correct = 0
-        total_train_samples = 0
+        
+        all_labels = []
+        all_predictions = []
 
         for features, labels in train_loader:
             features, labels = features.to(device), labels.to(device)
@@ -90,20 +89,24 @@ def train_mlp(model, loss_function, optimizer, train_loader, num_epochs, device=
             optimizer.step()  # Update weights.
             running_loss += loss.item()
 
-            total_train_correct += (outputs.max(1).indices == labels).sum().item()
-            total_train_samples += labels.size(0)
+            all_labels.extend(labels.cpu().numpy())
+            all_predictions.extend(outputs.max(1).indices.cpu().numpy())
 
         # Calculate average loss and accuracy over the epoch.
         avg_train_loss = running_loss / len(train_loader)
-        train_accuracy = total_train_correct / total_train_samples
 
-        epoch_avg_loss.append(avg_train_loss)
-        epoch_train_accuracy.append(train_accuracy)
+        # Calculate metrics using scikit-learn.
+        train_accuracy_sklearn = accuracy_score(all_labels, all_predictions)
+        train_precision = precision_score(all_labels, all_predictions, average='macro')
+        train_recall = recall_score(all_labels, all_predictions, average='macro')
+        train_f1 = f1_score(all_labels, all_predictions, average='macro')
 
         print(f"Epoch [{epoch+1}/{num_epochs}], "
-            f"Train Loss: {avg_train_loss:.4f}, Train Acc: {train_accuracy:.2f}")
+                f"Train Loss: {avg_train_loss:.4f}, Train Acc: {train_accuracy_sklearn:.4f}, "
+                f"Train Precision: {train_precision:.4f}, Train Recall: {train_recall:.4f}, "
+                f"Train F1: {train_f1:.4f}")
         
-    return model, epoch_avg_loss, train_accuracy
+    return model
 
 def validate_mlp(model, loss_function, val_loader, device):
     """
@@ -121,8 +124,10 @@ def validate_mlp(model, loss_function, val_loader, device):
     """
     model.eval()  # Set the model to evaluation mode.
     total_loss = 0.0
-    total_correct = 0
     total_samples = 0
+
+    all_val_labels = []
+    all_val_predictions = []
 
     with torch.no_grad():  # No need to track gradients for validation.
         for features, labels in val_loader:
@@ -131,11 +136,22 @@ def validate_mlp(model, loss_function, val_loader, device):
 
             loss = loss_function(outputs, labels)
             total_loss += loss.item()
-
-            total_correct += (outputs.max(1).indices == labels).sum().item()
             total_samples += labels.size(0)
 
-    avg_loss = total_loss / total_samples
-    accuracy = total_correct / total_samples
+            # Store true labels and predictions for accuracy calculation.
+            all_val_labels.extend(labels.cpu().numpy())
+            all_val_predictions.extend(outputs.max(1).indices.cpu().numpy())
 
-    print(f"Val Loss: {avg_loss:.4f}, Val Acc: {accuracy:.2f}")
+    avg_loss = total_loss / total_samples
+
+    # Calculate metrics using scikit-learn.
+    val_accuracy_sklearn = accuracy_score(all_val_labels, all_val_predictions)
+    val_precision = precision_score(all_val_labels, all_val_predictions, average='macro')
+    val_recall = recall_score(all_val_labels, all_val_predictions, average='macro')
+    val_f1 = f1_score(all_val_labels, all_val_predictions, average='macro')
+    val_confusion_matrix = confusion_matrix(all_val_labels, all_val_predictions)
+
+    print(f"Val Loss: {avg_loss:.4f}, Val Acc: {val_accuracy_sklearn:.4f}, "
+        f"Val Precision: {val_precision:.4f}, Val Recall: {val_recall:.4f}, "
+        f"Val F1: {val_f1:.4f}")
+    print("Confusion Matrix:\n", val_confusion_matrix)
