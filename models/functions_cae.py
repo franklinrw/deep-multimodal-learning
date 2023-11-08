@@ -5,115 +5,115 @@ import numpy as np
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from skimage.metrics import peak_signal_noise_ratio as psnr
+from skimage.metrics import structural_similarity as ssim
 
-class SimpleCAE(nn.Module):
+class BaseCAE(nn.Module):
+    """
+    Base class for Convolutional Autoencoder (CAE).
+    """
+    def __init__(self):
+        super(BaseCAE, self).__init__()
+
+    def encode(self, x):
+        """
+        Encodes the input using the encoder part of the CAE.
+        """
+        return self.encoder(x)
+
+    def forward(self, x):
+        """
+        Forward pass of the CAE. Encodes and then decodes the input.
+        """
+        x = self.encode(x)  # Encode the input
+        x = self.decoder(x)  # Decode the encoded representation
+        return x  # Return the reconstructed output
+
+
+class SimpleCAE(BaseCAE):
+    """
+    Simple Convolutional Autoencoder (CAE) with a basic encoder and decoder.
+    """
     def __init__(self):
         super(SimpleCAE, self).__init__()
 
         # Simplified Encoder
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 12, kernel_size=4, stride=2, padding=1),  # [batch, 12, 128, 96] assuming input is [batch, 3, 256, 192]
+            nn.Conv2d(3, 12, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            nn.Conv2d(12, 24, kernel_size=4, stride=2, padding=1),  # [batch, 24, 64, 48]
+            nn.Conv2d(12, 24, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            # You can continue to add more layers here if needed
         )
 
         # Simplified Decoder
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(24, 12, kernel_size=4, stride=2, padding=1),  # [batch, 12, 128, 96]
+            nn.ConvTranspose2d(24, 12, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            nn.ConvTranspose2d(12, 3, kernel_size=4, stride=2, padding=1),  # [batch, 3, 256, 192]
-            nn.Sigmoid()  # Sigmoid because we are probably dealing with images (normalized to [0, 1])
+            nn.ConvTranspose2d(12, 3, kernel_size=4, stride=2, padding=1),
+            nn.Sigmoid(),
         )
 
-    def encode(self, x):
-        return self.encoder(x)
 
-    def forward(self, x):
-        x = self.encoder(x)  # Encode the input
-        x = self.decoder(x)  # Decode the encoded representation
-        return x  # Return the reconstructed output
-
-class SimpleCAE_Dropout(nn.Module):
+class SimpleCAE_Dropout(BaseCAE):
+    """
+    Simple Convolutional Autoencoder (CAE) with dropout layers added for regularization.
+    """
     def __init__(self, dropout_rate=0.5):
         super(SimpleCAE_Dropout, self).__init__()
 
-        # Simplified Encoder
+        # Simplified Encoder with Dropout
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 12, kernel_size=4, stride=2, padding=1),  # [batch, 12, 128, 96]
+            nn.Conv2d(3, 12, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            nn.Dropout(dropout_rate),  # Dropout layer
-            nn.Conv2d(12, 24, kernel_size=4, stride=2, padding=1),  # [batch, 24, 64, 48]
+            nn.Dropout(dropout_rate),
+            nn.Conv2d(12, 24, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            nn.Dropout(dropout_rate),  # Dropout layer
-            # You can continue to add more layers here if needed
+            nn.Dropout(dropout_rate),
         )
 
-        # Simplified Decoder
+        # Simplified Decoder with Dropout
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(24, 12, kernel_size=4, stride=2, padding=1),  # [batch, 12, 128, 96]
+            nn.ConvTranspose2d(24, 12, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            nn.Dropout(dropout_rate),  # Dropout layer
-            nn.ConvTranspose2d(12, 3, kernel_size=4, stride=2, padding=1),  # [batch, 3, 256, 192]
-            nn.Sigmoid()  # Sigmoid because we are probably dealing with images (normalized to [0, 1])
+            nn.Dropout(dropout_rate),
+            nn.ConvTranspose2d(12, 3, kernel_size=4, stride=2, padding=1),
+            nn.Sigmoid(),
         )
 
-    def encode(self, x):
-        return self.encoder(x)
-
-    def forward(self, x):
-        x = self.encoder(x)  # Encode the input
-        x = self.decoder(x)  # Decode the encoded representation
-        return x  # Return the reconstructed output
-
-class deepCAE(nn.Module):
+class DeepCAE(BaseCAE):
+    """
+    Deep Convolutional Autoencoder (CAE) with multiple layers for more complex feature extraction.
+    """
     def __init__(self):
-        super(deepCAE, self).__init__()
+        super(DeepCAE, self).__init__()
 
-        # Encoder
+        # Deep Encoder
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1),  # 128x96
+            nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            
-            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),  # 64x48
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            
-            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),  # 32x24
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            
-            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1),  # 16x12
+            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            
-            nn.Conv2d(256, 512, kernel_size=4, stride=2, padding=1),  # 8x6
-            nn.ReLU()
+            nn.Conv2d(256, 512, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(),
         )
 
-        # Decoder
+        # Deep Decoder
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),  # 16x12
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            
-            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),  # 32x24
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),  # 64x48
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            
-            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),  # 128x96
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            
-            nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1),  # 256x192
-            nn.Sigmoid()
+            nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1),
+            nn.Sigmoid(),
         )
-
-    def encode(self, x):
-        return self.encoder(x)
-
-    def forward(self, x):
-        x = self.encoder(x)
-        x = self.decoder(x)
-        return x
 
 def train_cae(cae, loader, lossfunction, optimizer, num_epochs=5, visualize=False, device="cuda"):
     """
@@ -137,6 +137,8 @@ def train_cae(cae, loader, lossfunction, optimizer, num_epochs=5, visualize=Fals
     for epoch in range(num_epochs):
         # Initialize the running loss to zero at the beginning of each epoch.
         running_loss = 0.0
+        psnr_list = []
+        ssim_list = []
 
         # Iterate over the DataLoader. Each iteration provides a batch of data.
         for batch in loader:
@@ -172,12 +174,27 @@ def train_cae(cae, loader, lossfunction, optimizer, num_epochs=5, visualize=Fals
             running_loss += loss.item()
             batch_loss_history.append(loss.item())
 
+            images_np = images.cpu().detach().numpy()  # Detach and then convert to numpy
+            outputs_np = outputs.cpu().detach().numpy()
+
+            batch_psnr = psnr(images_np, outputs_np, data_range=images_np.max() - images_np.min())
+            psnr_list.append(batch_psnr)
+
+            batch_ssim = ssim(images_np, outputs_np, win_size=3, multichannel=True, data_range=images_np.max() - images_np.min())
+            ssim_list.append(batch_ssim)
+
         # Calculate the average loss for this epoch.
         avg_loss = running_loss / len(loader)
         epoch_loss_history.append(avg_loss)
 
         # Print the epoch's summary. The loss is averaged over all batches to get a sense of performance over the entire dataset.
         print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {avg_loss:.4f}")
+
+        avg_psnr = sum(psnr_list) / len(psnr_list)
+        print(f"Average PSNR Epoch [{epoch+1}/{num_epochs}]: {avg_psnr:.4f}")
+
+        avg_ssim = sum(ssim_list) / len(ssim_list)
+        print(f"Average SSIM Epoch [{epoch+1}/{num_epochs}]: {avg_ssim:.4f}")
 
         if visualize == True:
             visualize_reconstruction(cae, loader, num_samples=2, device='cuda')
@@ -202,6 +219,8 @@ def validate_cae(cae, loader, lossfunction, device="cuda"):
     # Set the model to evaluation mode. This deactivates layers like dropout and batch normalization.
     cae.eval()
     validation_loss_history = []
+    psnr_list = []
+    ssim_list = []
 
     # We do not need to compute gradients for evaluation, so we use torch.no_grad() to prevent PyTorch from using memory to track tensors for autograd.
     with torch.no_grad():
@@ -222,12 +241,27 @@ def validate_cae(cae, loader, lossfunction, device="cuda"):
             # Calculate the loss between the original and the reconstructed images.
             loss = lossfunction(outputs, images)
 
+            images_np = images.cpu().numpy()
+            outputs_np = outputs.cpu().numpy()
+
+            batch_psnr = psnr(images_np, outputs_np, data_range=images_np.max() - images_np.min())
+            psnr_list.append(batch_psnr)
+
+            batch_ssim = ssim(images_np, outputs_np, win_size=3, multichannel=True, data_range=images_np.max() - images_np.min())
+            ssim_list.append(batch_ssim)
+
             # Accumulate the loss for reporting.
             validation_loss_history.append(loss.item())
 
     # Calculate the average loss for the validation set.
     avg_val_loss = sum(validation_loss_history) / len(validation_loss_history)
     print("Average Validation Loss:", avg_val_loss)
+
+    avg_psnr = sum(psnr_list) / len(psnr_list)
+    print("Average PSNR:", avg_psnr)
+
+    avg_ssim = sum(ssim_list) / len(ssim_list)
+    print("Average SSIM:", avg_ssim)
 
     return avg_val_loss, validation_loss_history
 

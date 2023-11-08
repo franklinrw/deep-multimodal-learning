@@ -1,6 +1,8 @@
 import torch.nn.functional as F
 import torch
 import torch.nn as nn
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+
     
 class rawMLP(nn.Module):
     def __init__(self, input_dim, output_dim):
@@ -133,7 +135,7 @@ def validate_mlp(model, loss_function, val_loader, device):
             total_correct += (outputs.max(1).indices == labels).sum().item()
             total_samples += labels.size(0)
 
-    avg_loss = total_loss / len(val_loader)
-    accuracy = (total_correct / total_samples) * 100.0
+    avg_loss = total_loss / total_samples
+    accuracy = total_correct / total_samples
 
     print(f"Val Loss: {avg_loss:.4f}, Val Acc: {accuracy:.2f}")
