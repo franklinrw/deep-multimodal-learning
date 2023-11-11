@@ -53,7 +53,6 @@ class SimpleCAE(BaseCAE):
             nn.Sigmoid(),
         )
 
-
 class SimpleCAE_Dropout(BaseCAE):
     """
     Simple Convolutional Autoencoder (CAE) with dropout layers added for regularization.
@@ -174,7 +173,7 @@ def train_cae(cae, loader, lossfunction, optimizer, num_epochs=5, visualize=Fals
             running_loss += loss.item()
             batch_loss_history.append(loss.item())
 
-            images_np = images.cpu().detach().numpy()  # Detach and then convert to numpy
+            images_np = images.cpu().detach().numpy() 
             outputs_np = outputs.cpu().detach().numpy()
 
             batch_psnr = psnr(images_np, outputs_np, data_range=images_np.max() - images_np.min())
@@ -241,8 +240,8 @@ def validate_cae(cae, loader, lossfunction, device="cuda"):
             # Calculate the loss between the original and the reconstructed images.
             loss = lossfunction(outputs, images)
 
-            images_np = images.cpu().numpy()
-            outputs_np = outputs.cpu().numpy()
+            images_np = images.cpu().detach().numpy() 
+            outputs_np = outputs.cpu().detach().numpy()
 
             batch_psnr = psnr(images_np, outputs_np, data_range=images_np.max() - images_np.min())
             psnr_list.append(batch_psnr)
@@ -265,7 +264,80 @@ def validate_cae(cae, loader, lossfunction, device="cuda"):
 
     return avg_val_loss, validation_loss_history
 
-def get_latent_dataset(model, loader, label=1, device="cuda"):
+def train_autoencoder(model, loader, criterion, optimizer, num_epochs=5, add_noise=False, device="cuda", visualize=False):
+    """
+    This function trains an autoencoder, which can be a CAE or a DCAE, depending on the 'add_noise' parameter.
+
+    Parameters:
+    model (nn.Module): The autoencoder model to be trained.
+    loader (DataLoader): DataLoader that provides batches of data.
+    criterion: The loss function to be used during training.
+    optimizer: The optimization algorithm to be used during training.
+    num_epochs (int): The number of epochs to train the model for.
+    add_noise (bool): If True, adds Gaussian noise to the images for denoising autoencoder training.
+    device (str): The device type to be used for training (e.g., "cuda" or "cpu").
+    visualize (bool): Whether to visualize the reconstructed images during training.
+
+    Returns:
+    nn.Module: The trained autoencoder model.
+    list: A list of the loss values for each epoch.
+    """
+    model.to(device)
+    model.train()
+
+    epoch_loss_history = []
+
+    for epoch in range(num_epochs):
+        batch_loss_history = []
+        psnr_list = []
+        ssim_list = []
+
+        for batch in loader:
+            images, _ = batch
+            images = images.to(device)
+
+            # Prepare the images for input into the model by ensuring the data type and structure are correct.
+            images = images.float()
+            images = images.squeeze(1)
+            images = images.permute(0, 3, 1, 2)
+
+            # Add Gaussian noise if training a DCAE
+            if add_noise:
+                noisy_images = add_gaussian_noise(images)
+                input_images = noisy_images
+            else:
+                input_images = images
+
+            optimizer.zero_grad()
+            outputs = model.forward(input_images)
+            loss = criterion(outputs, images)
+
+            images_np = images.cpu().detach().numpy() 
+            outputs_np = outputs.cpu().detach().numpy()
+
+            batch_psnr = psnr(images_np, outputs_np, data_range=images_np.max() - images_np.min())
+            batch_ssim = ssim(images_np, outputs_np, win_size=3, multichannel=True, data_range=images_np.max() - images_np.min())
+            psnr_list.append(batch_psnr)
+            ssim_list.append(batch_ssim)
+
+            loss.backward()
+            optimizer.step()
+            batch_loss_history.append(loss.item())
+
+        avg_loss = sum(batch_loss_history) / len(batch_loss_history)
+        avg_psnr = sum(psnr_list) / len(psnr_list)
+        avg_ssim = sum(ssim_list) / len(ssim_list)
+
+        epoch_loss_history.append(avg_loss)
+        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {avg_loss:.4f}, PSNR: {avg_psnr:.4f}, SSIM: {avg_ssim:.4f}")
+
+        if visualize:
+            visualize_reconstruction(model, loader, num_samples=2, device=device)
+
+    return model, epoch_loss_history
+
+
+def get_latent_dataset(model, loader, label=1, add_noise=False, device="cuda"):
     """
     This function extracts features from the data using the encoder part of the autoencoder model.
     
@@ -305,8 +377,15 @@ def get_latent_dataset(model, loader, label=1, device="cuda"):
             # Rearrange the dimensions of the image. The model expects the channel dimension to be second.
             images = images.permute(0, 3, 1, 2)
 
+            # Add Gaussian noise if training a DCAE
+            if add_noise:
+                noisy_images = add_gaussian_noise(images)
+                input_images = noisy_images
+            else:
+                input_images = images
+
             # Pass the images through the model's encoder to get the features.
-            features = model.encoder(images)
+            features = model.encoder(input_images)
 
             # Reshape the features to a 2D tensor, so that each row corresponds to a set of features from one image.
             # The '-1' tells PyTorch to infer the total number of features automatically.
@@ -314,7 +393,7 @@ def get_latent_dataset(model, loader, label=1, device="cuda"):
 
             # Add the features and labels to our lists.
             features_list.append(features_reshaped)
-            labels_list.append(labels[label])  # Assuming 'labels[1]' contains the action labels.
+            labels_list.append(labels[label]) 
 
     # Concatenate the list of tensors into a single tensor.
     # 'torch.cat' concatenates tensors along a given dimension, here it's along dimension 0.
@@ -427,3 +506,21 @@ def visualize_latent_space(model, data_loader, n_components=2, random_state=42):
     
     else:
         raise ValueError("n_components must be either 2 or 3.")
+    
+def add_gaussian_noise(images, mean=0., std=0.1):
+    """
+    Adds Gaussian noise to the input images.
+
+    Args:
+        images (torch.Tensor): Input images to add noise to.
+        mean (float, optional): Mean of the Gaussian noise distribution. Default is 0.
+        std (float, optional): Standard deviation of the Gaussian noise distribution. Default is 0.1.
+
+    Returns:
+        torch.Tensor: Noisy images with added Gaussian noise.
+    """
+    noise = torch.randn_like(images) * std + mean
+    noisy_images = images + noise
+    noisy_images = torch.clamp(noisy_images, 0., 1.)
+    return noisy_images
+

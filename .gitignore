@@ -1,9 +1,9 @@
 /config.txt
 /mvae
+/data
 /data_old
-/data_v2
+/data_object_split
 /weights
-/__pycache__
 *.code-workspace
 *.png
 *.txt

@@ -1,8 +1,6 @@
-import numpy as np
-import cv2
 import pickle
 import os
-from functions import concatenate, normalize, resize, bgr_to_rgb, preprocess_image
+from functions import preprocess_image
 
 ### FOLDER LABELS ###
 sensornames = ['color', 'depthcolormap', 'icub_left', 'icub_right']

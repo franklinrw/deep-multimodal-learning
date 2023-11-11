@@ -1,8 +1,7 @@
-import numpy as np
-import cv2
 import pickle
 import os
-from functions import concatenate, normalize, resize, bgr_to_rgb
+import random
+from functions import preprocess_image
 
 ### FOLDER LABELS ###
 sensornames = ['color', 'depthcolormap', 'icub_left', 'icub_right']
@@ -17,8 +16,6 @@ def main():
     width, height = 256, 192
     base_path = 'C:/Users/Frank/OneDrive/Bureaublad/action_recognition_dataset/'
 
-    data_sets = initialize_data_sets()
-
     for objectname in objectnames:
         for toolname in toolnames:
             for action in actions:
@@ -28,34 +25,35 @@ def main():
                 for sensor in sensornames:
                     path = os.path.join(base_path, objectname, toolname, action, sensor)
 
+                    # Collect all images for this sensor
+                    all_images = []
                     for j in range(10):
                         image = preprocess_image(path, sensor, j, width, height)
+                        label = (label_tool, label_action)
+                        all_images.append((image, label))
 
-                        for set_name, data_set in data_sets.items():
-                            if j in data_set['ids']:
-                                data_set['data'][sensor].append(image)
-                                data_set['labels'].append((label_tool, label_action))
+                    # Shuffle and split data into 60/20/20
+                    random.shuffle(all_images)
+                    split1 = int(len(all_images) * 0.6)
+                    split2 = split1 + int(len(all_images) * 0.2)
+                    train_set, val_set, test_set = all_images[:split1], all_images[split1:split2], all_images[split2:]
 
-                    for set_name, data_set in data_sets.items():
-                        #data_set['data'][sensor] = np.vstack(data_set['data'][sensor])
-                        #data_set['labels'] = np.array(data_set['labels'], dtype=np.int32)
-
-                        filename = f"{set_name}.pkl"
-                        object_folder = os.path.join('C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/data', objectname, toolname, action, sensor)
-
+                    # Define a helper function to save data
+                    def save_data(dataset, set_name):
+                        object_folder = os.path.join('C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/data_v2', objectname, toolname, action, sensor)
                         if not os.path.exists(object_folder):
                             os.makedirs(object_folder)
-                        
+                        filename = f"{set_name}.pkl"
                         save_path = os.path.join(object_folder, filename)
-                        save_data_to_disk(data_set['data'][sensor], save_path)
+                        with open(save_path, 'wb') as f:
+                            pickle.dump(dataset, f)
 
-                        # Save labels for the sensor
-                        label_filename = f"y_{set_name}.pkl"
-                        save_path = os.path.join(object_folder, label_filename)
-                        save_data_to_disk(data_set['labels'], save_path)
+                    # Save the datasets
+                    save_data(train_set, 'training')
+                    save_data(val_set, 'validation')
+                    save_data(test_set, 'testing')
 
             print(f"Processing of {objectname} done")
-            data_sets = initialize_data_sets()
 
 if __name__ == '__main__':
     main()

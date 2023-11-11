@@ -61,7 +61,7 @@ def get_datasets(base_path, objectnames, toolnames, actions, sensor, set_name):
         for toolname in toolnames:
             for action in actions:
                 # \Bureaublad\ARC\deep-multimodal-learning\data_v2\0_woodenCube\hook\left_to_right\color
-                path = os.path.join(base_path, objectname, toolname, action, sensor, f"{set_name}_{sensor}.pkl")
+                path = os.path.join(base_path, objectname, toolname, action, sensor, f"{set_name}.pkl")
                 
                 # Check if the path exists
                 if not os.path.exists(path):

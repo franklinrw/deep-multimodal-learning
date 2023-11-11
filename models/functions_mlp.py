@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
-    
 class rawMLP(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(rawMLP, self).__init__()
@@ -32,7 +31,7 @@ class rawMLP(nn.Module):
 
         return x
 
-class caeMLP(nn.Module):
+class dropout_MLP(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(caeMLP, self).__init__()
 
@@ -56,6 +55,26 @@ class caeMLP(nn.Module):
         x = self.fc3(x)  # The network's output are the class scores
 
         return x
+    
+    import torch.nn as nn
+import torch.nn.functional as F
+
+class MLP(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(MLP, self).__init__()
+
+        self.fc1 = nn.Linear(input_dim, 512)
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, output_dim)  # Ensure output_dim matches the number of classes
+
+    def forward(self, x):
+        # Apply layer by layer transformations
+        x = F.relu(self.fc1(x))  # ReLU activation for non-linearity
+        x = F.relu(self.fc2(x))  # ReLU activation for non-linearity
+        x = self.fc3(x)  # The network's output are the class scores
+
+        return x
+
     
 def train_mlp(model, loss_function, optimizer, train_loader, num_epochs, device="cuda"):
     """
@@ -133,6 +152,10 @@ def validate_mlp(model, loss_function, val_loader, device):
         for features, labels in val_loader:
             features, labels = features.to(device), labels.to(device)
             outputs = model(features)
+
+            # print(outputs)
+            # print(outputs.max(1).indices.cpu().numpy())
+            # print(labels)
 
             loss = loss_function(outputs, labels)
             total_loss += loss.item()
