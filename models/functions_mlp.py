@@ -2,6 +2,7 @@ import torch.nn.functional as F
 import torch
 import torch.nn as nn
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.metrics import classification_report
 
 class rawMLP(nn.Module):
     def __init__(self, input_dim, output_dim):
@@ -75,6 +76,45 @@ class MLP(nn.Module):
 
         return x
 
+class CNN(nn.Module):
+    def __init__(self, num_classes=4):
+        super(CNN, self).__init__()
+        
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=5, activation='relu')
+        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.dropout1 = nn.Dropout(p=0.2)
+
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, activation='relu')
+        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.dropout2 = nn.Dropout(p=0.2)
+
+        self.conv3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, activation='relu')
+        self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.dropout3 = nn.Dropout(p=0.2)
+        self.flatten = nn.Flatten()
+
+        self.fc1 = nn.Linear(in_features=128 * 6 * 6, out_features=32)  # Adjust in_features based on your input size
+        self.fc2 = nn.Linear(in_features=32, out_features=32)
+        self.fc3 = nn.Linear(in_features=32, out_features=num_classes)
+
+    def forward(self, x):
+        x = self.pool1(F.relu(self.conv1(x)))
+        x = self.dropout1(x)
+
+        x = self.pool2(F.relu(self.conv2(x)))
+        x = self.dropout2(x)
+
+        x = self.pool3(F.relu(self.conv3(x)))
+        x = self.dropout3(x)
+        x = self.flatten(x)
+
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return F.log_softmax(x, dim=1)
+
+
+
     
 def train_mlp(model, loss_function, optimizer, train_loader, num_epochs, device="cuda"):
     """
@@ -90,41 +130,42 @@ def train_mlp(model, loss_function, optimizer, train_loader, num_epochs, device=
     Returns:
     None: The model is trained in place.
     """
-
+    model.train() 
     for epoch in range(num_epochs):
-        model.train() 
         running_loss = 0.0
         
-        all_labels = []
-        all_predictions = []
+        epoch_labels = []
+        epoch_predictions = []
 
         for features, labels in train_loader:
             features, labels = features.to(device), labels.to(device)
 
             optimizer.zero_grad()  # Clear previous gradients.
             outputs = model(features)  # Forward pass.
+            #print("output: ", outputs)
+            #print("labels: ", labels)
             loss = loss_function(outputs, labels)  # Compute loss.
             loss.backward()  # Backward pass.
             optimizer.step()  # Update weights.
             running_loss += loss.item()
-
-            all_labels.extend(labels.cpu().numpy())
-            all_predictions.extend(outputs.max(1).indices.cpu().numpy())
+            #print("indices:", outputs.max(1).indices.cpu().numpy())
+            epoch_labels.extend(labels.cpu().numpy())
+            epoch_predictions.extend(outputs.max(1).indices.cpu().numpy())
 
         # Calculate average loss and accuracy over the epoch.
         avg_train_loss = running_loss / len(train_loader)
 
         # Calculate metrics using scikit-learn.
-        train_accuracy_sklearn = accuracy_score(all_labels, all_predictions)
-        train_precision = precision_score(all_labels, all_predictions, average='macro')
-        train_recall = recall_score(all_labels, all_predictions, average='macro')
-        train_f1 = f1_score(all_labels, all_predictions, average='macro')
+        train_accuracy_sklearn = accuracy_score(epoch_labels, epoch_predictions)
+        train_precision = precision_score(epoch_labels, epoch_predictions, average='macro')
+        train_recall = recall_score(epoch_labels, epoch_predictions, average='macro')
+        train_f1 = f1_score(epoch_labels, epoch_predictions, average='macro')
 
-        print(f"Epoch [{epoch+1}/{num_epochs}], "
-                f"Train Loss: {avg_train_loss:.4f}, Train Acc: {train_accuracy_sklearn:.4f}, "
-                f"Train Precision: {train_precision:.4f}, Train Recall: {train_recall:.4f}, "
-                f"Train F1: {train_f1:.4f}")
-        
+        print(f"Epoch [{epoch+1}/{num_epochs}], ",
+            f"Train Loss: {avg_train_loss:.4f}, Train Acc: {train_accuracy_sklearn:.4f}, ",
+            f"Train Precision: {train_precision:.4f}, Train Recall: {train_recall:.4f}, ",
+            f"Train F1: {train_f1:.4f}")
+    
     return model
 
 def validate_mlp(model, loss_function, val_loader, device):

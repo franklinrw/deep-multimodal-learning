@@ -34,12 +34,12 @@ class SimpleCAE(BaseCAE):
     """
     Simple Convolutional Autoencoder (CAE) with a basic encoder and decoder.
     """
-    def __init__(self):
+    def __init__(self, input_channels=3):
         super(SimpleCAE, self).__init__()
 
         # Simplified Encoder
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 12, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(input_channels, 12, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.Conv2d(12, 24, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
@@ -49,7 +49,7 @@ class SimpleCAE(BaseCAE):
         self.decoder = nn.Sequential(
             nn.ConvTranspose2d(24, 12, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            nn.ConvTranspose2d(12, 3, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(12, input_channels, kernel_size=4, stride=2, padding=1),
             nn.Sigmoid(),
         )
 
@@ -79,16 +79,139 @@ class SimpleCAE_Dropout(BaseCAE):
             nn.Sigmoid(),
         )
 
+class CAEWithPooling(BaseCAE):
+    """
+    Convolutional Autoencoder (CAE) with max pooling and corresponding upsampling layers.
+    """
+    def __init__(self, input_channels=3):
+        super(CAEWithPooling, self).__init__()
+
+        # Encoder with Max Pooling
+        self.encoder = nn.Sequential(
+            nn.Conv2d(input_channels, 12, kernel_size=4, stride=2, padding=1),  # Output size: [12, x/2, y/2]
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),  # Output size: [12, x/4, y/4]
+            nn.Conv2d(12, 24, kernel_size=4, stride=2, padding=1),  # Output size: [24, x/8, y/8]
+            nn.ReLU(),
+            # No additional max pooling here to maintain symmetry with the decoder
+        )
+
+        # Decoder with Upsampling
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(24, 12, kernel_size=4, stride=2, padding=1),  # Upsample to [12, x/4, y/4]
+            nn.ReLU(),
+            nn.Upsample(scale_factor=2, mode='nearest'),  # Upsample to [12, x/2, y/2]
+            nn.ConvTranspose2d(12, input_channels, kernel_size=4, stride=2, padding=1),  # Upsample to [3, x, y]
+            nn.Sigmoid(),
+        )
+
+# class CAEWithPooling(BaseCAE):
+#     """
+#     Convolutional Autoencoder (CAE) with max pooling in the encoder and 
+#     corresponding transposed convolutions in the decoder for upsampling.
+#     """
+#     def __init__(self, input_channels=3):
+#         super(CAEWithPooling, self).__init__()
+
+#         # Encoder with Max Pooling
+#         self.encoder = nn.Sequential(
+#             nn.Conv2d(input_channels, 12, kernel_size=4, stride=2, padding=1),  # Output size: [12, x/2, y/2]
+#             nn.ReLU(),
+#             nn.MaxPool2d(kernel_size=2, stride=2),  # Output size: [12, x/4, y/4]
+#             nn.Conv2d(12, 24, kernel_size=4, stride=2, padding=1),  # Output size: [24, x/8, y/8]
+#             nn.ReLU(),
+#         )
+
+#         # Decoder with Transposed Convolutions
+#         self.decoder = nn.Sequential(
+#             nn.ConvTranspose2d(24, 24, kernel_size=4, stride=2, padding=1),  # Upsample to [24, x/4, y/4]
+#             nn.ReLU(),
+#             nn.ConvTranspose2d(24, 12, kernel_size=4, stride=2, padding=1),  # Upsample to [12, x/2, y/2]
+#             nn.ReLU(),
+#             nn.ConvTranspose2d(12, input_channels, kernel_size=4, stride=2, padding=1),  # Upsample to [3, x, y]
+#             nn.Sigmoid(),
+#         )
+
+class ExtendedCAEWithPooling(BaseCAE):
+    """
+    Extended Convolutional Autoencoder (CAE) with additional max pooling and corresponding upsampling layers.
+    """
+    def __init__(self, input_channels=3):
+        super(ExtendedCAEWithPooling, self).__init__()
+
+        # Extended Encoder with More Max Pooling
+        self.encoder = nn.Sequential(
+            nn.Conv2d(input_channels, 12, kernel_size=4, stride=2, padding=1),  # Output size: [12, x/2, y/2]
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),  # Output size: [12, x/4, y/4]
+            nn.Conv2d(12, 24, kernel_size=4, stride=2, padding=1),  # Output size: [24, x/8, y/8]
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),  # Output size: [24, x/16, y/16]
+            nn.Conv2d(24, 48, kernel_size=4, stride=2, padding=1),  # Output size: [48, x/32, y/32]
+            nn.ReLU(),
+            # Additional max pooling can be added here if needed
+        )
+
+        # Extended Decoder with More Upsampling
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(48, 48, kernel_size=4, stride=2, padding=1),  # Upsample to [48, x/16, y/16]
+            nn.ReLU(),
+            nn.Upsample(scale_factor=2, mode='nearest'),  # Upsample to [48, x/8, y/8]
+            nn.ConvTranspose2d(48, 24, kernel_size=4, stride=2, padding=1),  # Upsample to [24, x/4, y/4]
+            nn.ReLU(),
+            nn.Upsample(scale_factor=2, mode='nearest'),  # Upsample to [24, x/2, y/2]
+            nn.ConvTranspose2d(24, input_channels, kernel_size=4, stride=2, padding=1),  # Upsample to [input_channels, x, y]
+            nn.Sigmoid(),
+        )
+
+
+class ExtendedCAEWithPooling(BaseCAE):
+    """
+    Extended Convolutional Autoencoder (CAE) with additional max pooling in the encoder 
+    and corresponding upsampling in the decoder.
+    """
+    def __init__(self, input_channels=3):
+        super(ExtendedCAEWithPooling, self).__init__()
+
+        # Extended Encoder with More Max Pooling
+        self.encoder = nn.Sequential(
+            nn.Conv2d(input_channels, 12, kernel_size=4, stride=2, padding=1),  # Output size: [12, x/2, y/2]
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),  # Output size: [12, x/4, y/4]
+            nn.Conv2d(12, 24, kernel_size=4, stride=2, padding=1),  # Output size: [24, x/8, y/8]
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),  # Output size: [24, x/16, y/16]
+        )
+
+        # Extended Decoder with More Upsampling
+        self.decoder = nn.Sequential(
+            nn.Upsample(scale_factor=2, mode='nearest'),  # Upsample to [24, x/8, y/8]
+            nn.Conv2d(24, 24, kernel_size=3, padding=1),  # Keeping spatial dimensions
+            nn.ReLU(),
+            nn.Upsample(scale_factor=2, mode='nearest'),  # Upsample to [24, x/4, y/4]
+            nn.Conv2d(24, 12, kernel_size=3, padding=1),  # Adjusting channels, keeping spatial dimensions
+            nn.ReLU(),
+            nn.Upsample(scale_factor=2, mode='nearest'),  # Upsample to [12, x/2, y/2]
+            nn.Conv2d(12, input_channels, kernel_size=3, padding=1),  # Adjusting channels to match input
+            nn.Sigmoid(),
+        )
+
+    def forward(self, x):
+        encoded = self.encoder(x)
+        decoded = self.decoder(encoded)
+        return decoded
+
+
 class DeepCAE(BaseCAE):
     """
     Deep Convolutional Autoencoder (CAE) with multiple layers for more complex feature extraction.
     """
-    def __init__(self):
+    def __init__(self, input_channels=3):
         super(DeepCAE, self).__init__()
 
         # Deep Encoder
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(input_channels, 32, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
             nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
@@ -110,98 +233,12 @@ class DeepCAE(BaseCAE):
             nn.ReLU(),
             nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(32, input_channels, kernel_size=4, stride=2, padding=1),
             nn.Sigmoid(),
         )
 
-def train_cae(cae, loader, lossfunction, optimizer, num_epochs=5, visualize=False, device="cuda"):
-    """
-    This function trains a convolutional autoencoder (CAE).
 
-    Parameters:
-    model (nn.Module): The autoencoder model to be trained.
-    loader (DataLoader): DataLoader that provides batches of data.
-    num_epochs (int): The number of training epochs. Default is 5.
-    lr (float): Learning rate for the optimizer. Default is 0.001.
-
-    Returns:
-    None: The function trains the model in place and does not return anything.
-    """
-    # Set the model to training mode. This activates layers like dropout and batch normalization.
-    cae.train()
-    batch_loss_history = []
-    epoch_loss_history = []
-
-    # Iterate over the dataset multiple times (each iteration over the entire dataset is called an epoch).
-    for epoch in range(num_epochs):
-        # Initialize the running loss to zero at the beginning of each epoch.
-        running_loss = 0.0
-        psnr_list = []
-        ssim_list = []
-
-        # Iterate over the DataLoader. Each iteration provides a batch of data.
-        for batch in loader:
-            # Unpack the batch. We're not interested in labels since autoencoders are unsupervised.
-            images, _ = batch
-            images = images.to(device)
-
-            #print(images)
-
-            # Prepare the images for input into the model by ensuring the data type and structure are correct.
-            images = images.float()
-            images = images.squeeze(1)
-            images = images.permute(0, 3, 1, 2)
-
-            # Forward pass: pass the images through the model to get the reconstructed images.
-            outputs = cae.forward(images)
-
-            #print(outputs)
-
-            # Calculate the loss between the original and the reconstructed images.
-            loss = lossfunction(outputs, images)
-
-            # Zero the parameter gradients to prevent accumulation during backpropagation.
-            optimizer.zero_grad()
-
-            # Backward pass: compute the gradients of the loss w.r.t. the model parameters.
-            loss.backward()
-
-            # Update the model parameters based on the computed gradients.
-            optimizer.step()
-
-            # Accumulate the loss for reporting.
-            running_loss += loss.item()
-            batch_loss_history.append(loss.item())
-
-            images_np = images.cpu().detach().numpy() 
-            outputs_np = outputs.cpu().detach().numpy()
-
-            batch_psnr = psnr(images_np, outputs_np, data_range=images_np.max() - images_np.min())
-            psnr_list.append(batch_psnr)
-
-            batch_ssim = ssim(images_np, outputs_np, win_size=3, multichannel=True, data_range=images_np.max() - images_np.min())
-            ssim_list.append(batch_ssim)
-
-        # Calculate the average loss for this epoch.
-        avg_loss = running_loss / len(loader)
-        epoch_loss_history.append(avg_loss)
-
-        # Print the epoch's summary. The loss is averaged over all batches to get a sense of performance over the entire dataset.
-        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {avg_loss:.4f}")
-
-        avg_psnr = sum(psnr_list) / len(psnr_list)
-        print(f"Average PSNR Epoch [{epoch+1}/{num_epochs}]: {avg_psnr:.4f}")
-
-        avg_ssim = sum(ssim_list) / len(ssim_list)
-        print(f"Average SSIM Epoch [{epoch+1}/{num_epochs}]: {avg_ssim:.4f}")
-
-        if visualize == True:
-            visualize_reconstruction(cae, loader, num_samples=2, device='cuda')
-            cae.train()
-
-    return cae, batch_loss_history, epoch_loss_history
-
-def validate_cae(cae, loader, lossfunction, device="cuda"):
+def validate_cae(cae, loader, lossfunction, is_depth, device="cuda"):
     """
     This function evaluates a convolutional autoencoder (CAE) on the validation set.
 
@@ -229,10 +266,14 @@ def validate_cae(cae, loader, lossfunction, device="cuda"):
             images, _ = batch
             images = images.to(device)
 
-            # Prepare the images for input into the model by ensuring the data type and structure are correct.
+            #print("shape images:", images.shape)
             images = images.float()
-            images = images.squeeze(1)
-            images = images.permute(0, 3, 1, 2)
+            # Prepare the images for input into the model by ensuring the data type and structure are correct.
+            if not is_depth:
+                images = images.squeeze(1)
+                #print("shape color image after squeeze:", images.shape)
+                images = images.permute(0, 3, 1, 2)
+                #print("shape color image after permute:", images.shape)
 
             # Forward pass: pass the images through the model to get the reconstructed images.
             outputs = cae.forward(images)
@@ -240,14 +281,14 @@ def validate_cae(cae, loader, lossfunction, device="cuda"):
             # Calculate the loss between the original and the reconstructed images.
             loss = lossfunction(outputs, images)
 
-            images_np = images.cpu().detach().numpy() 
-            outputs_np = outputs.cpu().detach().numpy()
+            images_np = images.detach().cpu().numpy() 
+            outputs_np = outputs.detach().cpu().numpy()
 
             batch_psnr = psnr(images_np, outputs_np, data_range=images_np.max() - images_np.min())
             psnr_list.append(batch_psnr)
 
-            batch_ssim = ssim(images_np, outputs_np, win_size=3, multichannel=True, data_range=images_np.max() - images_np.min())
-            ssim_list.append(batch_ssim)
+            # batch_ssim = ssim(images_np, outputs_np, win_size=3, multichannel=False, data_range=images_np.max() - images_np.min())
+            # ssim_list.append(batch_ssim)
 
             # Accumulate the loss for reporting.
             validation_loss_history.append(loss.item())
@@ -259,30 +300,13 @@ def validate_cae(cae, loader, lossfunction, device="cuda"):
     avg_psnr = sum(psnr_list) / len(psnr_list)
     print("Average PSNR:", avg_psnr)
 
-    avg_ssim = sum(ssim_list) / len(ssim_list)
-    print("Average SSIM:", avg_ssim)
+    # avg_ssim = sum(ssim_list) / len(ssim_list)
+    # print("Average SSIM:", avg_ssim)
 
     return avg_val_loss, validation_loss_history
 
-def train_autoencoder(model, loader, criterion, optimizer, num_epochs=5, add_noise=False, device="cuda", visualize=False):
-    """
-    This function trains an autoencoder, which can be a CAE or a DCAE, depending on the 'add_noise' parameter.
+def train_autoencoder(model, loader, criterion, optimizer, is_depth=False, num_epochs=5, add_noise=False, device="cuda", visualize=False):
 
-    Parameters:
-    model (nn.Module): The autoencoder model to be trained.
-    loader (DataLoader): DataLoader that provides batches of data.
-    criterion: The loss function to be used during training.
-    optimizer: The optimization algorithm to be used during training.
-    num_epochs (int): The number of epochs to train the model for.
-    add_noise (bool): If True, adds Gaussian noise to the images for denoising autoencoder training.
-    device (str): The device type to be used for training (e.g., "cuda" or "cpu").
-    visualize (bool): Whether to visualize the reconstructed images during training.
-
-    Returns:
-    nn.Module: The trained autoencoder model.
-    list: A list of the loss values for each epoch.
-    """
-    model.to(device)
     model.train()
 
     epoch_loss_history = []
@@ -290,16 +314,19 @@ def train_autoencoder(model, loader, criterion, optimizer, num_epochs=5, add_noi
     for epoch in range(num_epochs):
         batch_loss_history = []
         psnr_list = []
-        ssim_list = []
 
         for batch in loader:
             images, _ = batch
             images = images.to(device)
-
-            # Prepare the images for input into the model by ensuring the data type and structure are correct.
+            
+            #print("shape images:", images.shape)
             images = images.float()
-            images = images.squeeze(1)
-            images = images.permute(0, 3, 1, 2)
+            # Prepare the images for input into the model by ensuring the data type and structure are correct.
+            if not is_depth:
+                images = images.squeeze(1)
+                #print("shape color image after squeeze:", images.shape)
+                images = images.permute(0, 3, 1, 2)
+                #print("shape color image after permute:", images.shape)
 
             # Add Gaussian noise if training a DCAE
             if add_noise:
@@ -312,13 +339,13 @@ def train_autoencoder(model, loader, criterion, optimizer, num_epochs=5, add_noi
             outputs = model.forward(input_images)
             loss = criterion(outputs, images)
 
-            images_np = images.cpu().detach().numpy() 
-            outputs_np = outputs.cpu().detach().numpy()
+            images_np = images.detach().cpu().numpy() 
+            outputs_np = outputs.detach().cpu().numpy()
 
             batch_psnr = psnr(images_np, outputs_np, data_range=images_np.max() - images_np.min())
-            batch_ssim = ssim(images_np, outputs_np, win_size=3, multichannel=True, data_range=images_np.max() - images_np.min())
+            # batch_ssim = ssim(images_np, outputs_np, win_size=3, multichannel=False, data_range=images_np.max() - images_np.min())
             psnr_list.append(batch_psnr)
-            ssim_list.append(batch_ssim)
+            # ssim_list.append(batch_ssim)
 
             loss.backward()
             optimizer.step()
@@ -326,18 +353,18 @@ def train_autoencoder(model, loader, criterion, optimizer, num_epochs=5, add_noi
 
         avg_loss = sum(batch_loss_history) / len(batch_loss_history)
         avg_psnr = sum(psnr_list) / len(psnr_list)
-        avg_ssim = sum(ssim_list) / len(ssim_list)
+        # avg_ssim = sum(ssim_list) / len(ssim_list)
 
         epoch_loss_history.append(avg_loss)
-        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {avg_loss:.4f}, PSNR: {avg_psnr:.4f}, SSIM: {avg_ssim:.4f}")
+        print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {avg_loss:.4f}, PSNR: {avg_psnr:.4f}")
 
         if visualize:
-            visualize_reconstruction(model, loader, num_samples=2, device=device)
+            visualize_reconstruction(model, loader, num_samples=2, depth=is_depth, device=device)
 
     return model, epoch_loss_history
 
 
-def get_latent_dataset(model, loader, label=1, add_noise=False, device="cuda"):
+def get_latent_dataset(model, loader, label=1, add_noise=False, is_depth=False, device="cuda"):
     """
     This function extracts features from the data using the encoder part of the autoencoder model.
     
@@ -368,14 +395,15 @@ def get_latent_dataset(model, loader, label=1, add_noise=False, device="cuda"):
             images, labels = batch
             #print("Labels type 0:", type(labels[0]),"Labels type 1:", type(labels[1]), "labels length:", len(labels), "labels 0 length:", len(labels[0]))
             images = images.to(device)
-            # Convert the images to the appropriate type (float).
+
+            #print("shape images:", images.shape)
             images = images.float()
-
-            # Remove any empty dimensions or dimensions with size one.
-            images = images.squeeze(1)
-
-            # Rearrange the dimensions of the image. The model expects the channel dimension to be second.
-            images = images.permute(0, 3, 1, 2)
+            # Prepare the images for input into the model by ensuring the data type and structure are correct.
+            if not is_depth:
+                images = images.squeeze(1)
+                #print("shape color image after squeeze:", images.shape)
+                images = images.permute(0, 3, 1, 2)
+                #print("shape color image after permute:", images.shape)
 
             # Add Gaussian noise if training a DCAE
             if add_noise:
@@ -405,8 +433,7 @@ def get_latent_dataset(model, loader, label=1, add_noise=False, device="cuda"):
 
     return latent_dataset
 
-
-def visualize_reconstruction(model, test_loader, num_samples=5, device='cuda'):
+def visualize_reconstruction(model, test_loader, num_samples=5, depth=False, device='cuda'):
     """
     Visualize the original and reconstructed images from the test set.
     
@@ -421,11 +448,15 @@ def visualize_reconstruction(model, test_loader, num_samples=5, device='cuda'):
         # Get a batch of test data
         images, _ = next(iter(test_loader))
         
-        # Move images to the device
-        images = images.float().to(device)  # Model expects float and move to the specified device
-        images = images.squeeze(1)  # Remove the dimension with size 1
-        images = images.permute(0, 3, 1, 2)   # Move the channels dimension to the correct position
-        
+        #print("shape images:", images.shape)
+        images = images.float().to(device)
+        # Prepare the images for input into the model by ensuring the data type and structure are correct.
+        if not depth:
+            images = images.squeeze(1)
+            #print("shape color image after squeeze:", images.shape)
+            images = images.permute(0, 3, 1, 2)
+            #print("shape color image after permute:", images.shape)
+
         # Get the model's reconstructions
         reconstructions = model(images)
         
@@ -452,22 +483,27 @@ def visualize_reconstruction(model, test_loader, num_samples=5, device='cuda'):
         plt.tight_layout()
         plt.show()
 
-def collect_latent_vectors(model, loader, device="cuda"):
+def collect_latent_vectors(model, loader, is_depth=False, device="cuda"):
     model.eval()  # Set the model to evaluation mode
     latent_vectors = []
     with torch.no_grad():
         for batch in loader:
             images, _ = batch
             images = images.to(device)
+            #print("shape images:", images.shape)
             images = images.float()
-            images = images.squeeze(1)
-            images = images.permute(0, 3, 1, 2)
+            # Prepare the images for input into the model by ensuring the data type and structure are correct.
+            if not is_depth:
+                images = images.squeeze(1)
+                #print("shape color image after squeeze:", images.shape)
+                images = images.permute(0, 3, 1, 2)
+                #print("shape color image after permute:", images.shape)
             latent_vec = model.encode(images)
             latent_vec = latent_vec.reshape(latent_vec.size(0), -1)  # Flatten the latent vectors using .reshape()
             latent_vectors.append(latent_vec.cpu().numpy())
     return np.concatenate(latent_vectors)
 
-def visualize_latent_space(model, data_loader, n_components=2, random_state=42):
+def visualize_latent_space(model, data_loader, is_depth=False, n_components=2, random_state=42):
     """
     Visualize the latent space of an autoencoder using t-SNE.
     
@@ -478,7 +514,7 @@ def visualize_latent_space(model, data_loader, n_components=2, random_state=42):
     - random_state: Random state for t-SNE. Default is 42.
     """
     # Collect latent vectors
-    latent_vectors = collect_latent_vectors(model, data_loader)
+    latent_vectors = collect_latent_vectors(model, data_loader, is_depth=is_depth)
     
     # Perform t-SNE
     tsne = TSNE(n_components=n_components, random_state=random_state)

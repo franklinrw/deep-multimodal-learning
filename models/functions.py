@@ -81,17 +81,38 @@ def get_loader(base_path, objectnames, toolnames, actions, sensor, set_name, bat
 
     return loader
 
-def calculate_accuracy(output, labels):
-    # Get predictions
-    predicted = output.max(1).indices  # The underscore is used to ignore the actual maximum values returned
+def inspect_loader(loader, description="Loader"):
+    """
+    Inspect the first batch from a DataLoader.
 
-    # Check where the predictions and labels are the same
-    correct_predictions = (predicted == labels).sum().item()
+    :param loader: DataLoader
+        DataLoader to inspect.
+    :param description: str
+        Description of the DataLoader (e.g., 'Color Loader', 'Depth Loader').
+    """
+    images, labels = next(iter(loader))
+    print(f"{description} - First Batch Inspection")
+    print("--------------------------------------------------")
+    print("Batch Shape:", images.shape)
+    print("Data Type:", images.dtype)
+    # print("Label Shape:", labels.shape)
+    # print("Label Data Type:", labels.dtype)
+    print("First Image Shape:", images[0].shape)
+    print("Max Pixel Value in First Image:", images[0].max())
+    print("Min Pixel Value in First Image:", images[0].min())
+    print("--------------------------------------------------\n")
 
-    # Calculate accuracy
-    accuracy = correct_predictions / labels.size(0)  # or labels.numel() for the total number of elements
+# def calculate_accuracy(output, labels):
+#     # Get predictions
+#     predicted = output.max(1).indices  # The underscore is used to ignore the actual maximum values returned
 
-    return accuracy * 100.0  # returns as percentage
+#     # Check where the predictions and labels are the same
+#     correct_predictions = (predicted == labels).sum().item()
+
+#     # Calculate accuracy
+#     accuracy = correct_predictions / labels.size(0)  # or labels.numel() for the total number of elements
+
+#     return accuracy * 100.0  # returns as percentage
 
 def plot_histories(training_loss_history, validation_loss_history=None):
     plt.figure(figsize=(10, 5))

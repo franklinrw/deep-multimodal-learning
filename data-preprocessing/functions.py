@@ -62,24 +62,43 @@ def normalize_depth(image, min_depth, max_depth):
 #     image = concatenate(init, effect)
 #     return image.reshape(1, *image.shape)
 
+def load_image(file_path, is_depth):
+        """ Load an image as depth or color based on the is_depth flag. """
+        if is_depth:
+            return cv2.imread(file_path, cv2.IMREAD_ANYDEPTH)
+        else:
+            return cv2.imread(file_path)
+
 def preprocess_image(path, sensor, j, width, height):
+
+    depth = "depth" in sensor
+
     filename = f"init_{sensor if 'icub' not in sensor else 'color_' + sensor}_{j}.png"
-    init = cv2.imread(os.path.join(path, filename))
+    init = load_image(os.path.join(path, filename), depth)
     
     filename = f"effect_{sensor if 'icub' not in sensor else 'color_' + sensor}_{j}.png"
-    effect = cv2.imread(os.path.join(path, filename))
+    effect = load_image(os.path.join(path, filename), depth)
+
+    #print("shape", init.shape)
 
     # Pre-processing steps
     init, effect = [resize(img, width, height) for img in [init, effect]]
 
+    #print("shape after resize", init.shape)
+
     if 'depth' in sensor:
         # Depth image processing
         # init, effect = [handle_invalid_depth_values(img) for img in [init, effect]]
+        #print("depth image")
         init, effect = [normalize_depth(img, np.min(img), np.max(img)) for img in [init, effect]]
+        #print("shape after normalized", init.shape)
     else:
         # Color image processing
         init, effect = [bgr_to_rgb(img) for img in [init, effect]]
         init, effect = [normalize(img) for img in [init, effect]]
     
     image = concatenate(init, effect)
-    return image.reshape(1, *image.shape)
+    #print("shape after concatenate", image.shape)
+    image = image.reshape(1, *image.shape)
+    #print("shape after reshape", image.shape)
+    return image
