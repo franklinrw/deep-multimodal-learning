@@ -9,4 +9,4 @@
 *.png
 *.txt
 /legacy
-/test_channels
+/data_channels_test
