@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from skimage.metrics import peak_signal_noise_ratio as psnr
 from skimage.metrics import structural_similarity as ssim
+from functions import get_loader, CustomSampler
+
 
 def validate_cae(cae, loader, lossfunction, is_depth = False, device="cuda"):
     """
@@ -206,6 +208,15 @@ def get_latent_dataset(model, loader, label=1, add_noise=False, is_depth=False, 
     return latent_dataset
 
 
+def get_latent_dataloader(cae_model, base_path, objects, tool_names, actions, sensor, set_name, shuffle, batch_size, device, indices=None):
+    test_loader = get_loader(base_path, objects, tool_names, actions, sensor, set_name, shuffle=shuffle, batch_size=batch_size)
+    dataset = get_latent_dataset(cae_model, test_loader, add_noise=False, is_depth=False, device=device)
+
+    sampler = CustomSampler(dataset, indices) if indices is not None else None
+
+    return torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, sampler=sampler)
+
+
 def visualize_reconstruction(model, test_loader, num_samples=5, depth=False, device='cuda'):
     """
     Visualize the original and reconstructed images from the test set.
@@ -255,6 +266,7 @@ def visualize_reconstruction(model, test_loader, num_samples=5, depth=False, dev
         
         plt.tight_layout()
         plt.show()
+
 
 def collect_latent_vectors(model, loader, is_depth=False, device="cuda"):
     model.eval()  # Set the model to evaluation mode

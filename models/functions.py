@@ -4,6 +4,8 @@ import os
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, ConcatDataset
 import torch
+from sklearn.metrics import classification_report
+from torch.utils.data import Sampler
 
 class CustomDataset(Dataset):
     def __init__(self, file_path):
@@ -40,6 +42,18 @@ class CustomDataset(Dataset):
 
         return sample, label
     
+
+class CustomSampler(Sampler):
+    def __init__(self, data_source, indices):
+        self.data_source = data_source
+        self.indices = indices
+
+    def __iter__(self):
+        return (self.indices[i] for i in range(len(self.indices)))
+
+    def __len__(self):
+        return len(self.indices)
+
     
 def get_datasets(base_path, objectnames, toolnames, actions, sensor, set_name):
     """
@@ -76,13 +90,68 @@ def get_datasets(base_path, objectnames, toolnames, actions, sensor, set_name):
     # Return a ConcatDataset instance comprising all the datasets
     return ConcatDataset(datasets)
 
-
-def get_loader(base_path, objectnames, toolnames, actions, sensor, set_name, batch_size=8):
+def get_loader(base_path, objectnames, toolnames, actions, sensor, set_name, shuffle=False, batch_size=8):
 
     dataset = get_datasets(base_path, objectnames, toolnames, actions, sensor, set_name)
-    loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=(set_name == 'training'))
+    loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=shuffle)
 
     return loader
+
+
+def load_pretrained_cae(model_class, model_path, weight_name, device):
+    model = model_class().to(device)
+    model.load_state_dict(torch.load(model_path + weight_name))
+    model.eval()
+    return model
+
+def load_pretrained_mlp(model_class, model_path, weight_name, device, input_dim, output_dim):
+    model = model_class(input_dim, output_dim).to(device)
+    model.load_state_dict(torch.load(model_path + weight_name))
+    model.eval()
+    return model
+
+
+def get_model_predictions(model, dataloader, device):
+    predictions = []
+    with torch.no_grad():
+        for inputs, _ in dataloader:
+            inputs = inputs.to(device)
+            outputs = model(inputs)
+            predictions.append(outputs)
+    return predictions
+
+
+def average_fusion_predictions(model_predictions):
+    final_predictions = []
+    num_models = len(model_predictions)
+    num_batches = len(model_predictions[0])
+
+    for i in range(num_batches):
+        avg_prediction = sum(model_predictions[j][i] for j in range(num_models)) / num_models
+        final_predictions.append(avg_prediction)
+
+    return final_predictions
+
+
+def calculate_fusion_accuracy(predicted_classes, true_labels):
+    flattened_true_labels = [label for sublist in true_labels for label in sublist]
+    flattened_predicted_classes = [pred for sublist in predicted_classes for pred in sublist]
+
+    assert len(flattened_true_labels) == len(flattened_predicted_classes), "Mismatch in predictions and labels"
+    
+    correct_predictions = sum(pred == true for pred, true in zip(flattened_predicted_classes, flattened_true_labels))
+    total_predictions = len(flattened_true_labels)
+    return correct_predictions / total_predictions
+
+
+def calculate_classification_report(predicted_classes, true_labels, class_names):
+    flattened_true_labels = [label for sublist in true_labels for label in sublist]
+    flattened_predicted_classes = [pred for sublist in predicted_classes for pred in sublist]
+
+    assert len(flattened_true_labels) == len(flattened_predicted_classes), "Mismatch in predictions and labels"
+    
+    report = classification_report(flattened_true_labels, flattened_predicted_classes, target_names=class_names)
+    print(report)
 
 
 def inspect_loader(loader, description="Loader"):
