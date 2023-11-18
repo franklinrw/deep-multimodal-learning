@@ -3,6 +3,7 @@ import pickle
 import os
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, ConcatDataset
+import torch
 
 class CustomDataset(Dataset):
     def __init__(self, file_path):
@@ -39,6 +40,7 @@ class CustomDataset(Dataset):
 
         return sample, label
     
+    
 def get_datasets(base_path, objectnames, toolnames, actions, sensor, set_name):
     """
     This function generates a list of CustomDataset instances for each pickle file in the directory structure.
@@ -74,12 +76,14 @@ def get_datasets(base_path, objectnames, toolnames, actions, sensor, set_name):
     # Return a ConcatDataset instance comprising all the datasets
     return ConcatDataset(datasets)
 
+
 def get_loader(base_path, objectnames, toolnames, actions, sensor, set_name, batch_size=8):
 
     dataset = get_datasets(base_path, objectnames, toolnames, actions, sensor, set_name)
     loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=(set_name == 'training'))
 
     return loader
+
 
 def inspect_loader(loader, description="Loader"):
     """
@@ -102,17 +106,6 @@ def inspect_loader(loader, description="Loader"):
     print("Min Pixel Value in First Image:", images[0].min())
     print("--------------------------------------------------\n")
 
-# def calculate_accuracy(output, labels):
-#     # Get predictions
-#     predicted = output.max(1).indices  # The underscore is used to ignore the actual maximum values returned
-
-#     # Check where the predictions and labels are the same
-#     correct_predictions = (predicted == labels).sum().item()
-
-#     # Calculate accuracy
-#     accuracy = correct_predictions / labels.size(0)  # or labels.numel() for the total number of elements
-
-#     return accuracy * 100.0  # returns as percentage
 
 def plot_histories(training_loss_history, validation_loss_history=None):
     plt.figure(figsize=(10, 5))

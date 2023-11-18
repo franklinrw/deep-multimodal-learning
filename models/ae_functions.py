@@ -57,7 +57,7 @@ def validate_cae(cae, loader, lossfunction, is_depth = False, device="cuda"):
             batch_psnr = psnr(images_np, outputs_np, data_range=images_np.max() - images_np.min())
             psnr_list.append(batch_psnr)
 
-            batch_ssim = ssim(images_np, outputs_np, win_size=3, multichannel=False, data_range=images_np.max() - images_np.min())
+            batch_ssim = ssim(images_np, outputs_np, win_size=3, multichannel=True, data_range=images_np.max() - images_np.min())
             ssim_list.append(batch_ssim)
 
             # Accumulate the loss for reporting.

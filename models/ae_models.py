@@ -53,6 +53,7 @@ class SimpleCAE(BaseCAE):
             nn.Sigmoid(),
         )
 
+
 class SimpleBatchCAE(BaseCAE):
     """
     Simple Convolutional Autoencoder (CAE) with batch normalization in both the encoder and decoder.
@@ -79,6 +80,36 @@ class SimpleBatchCAE(BaseCAE):
             nn.BatchNorm2d(input_channels),  # Batch normalization layer
             nn.Sigmoid(),
         )
+
+class SimpleBatchDropoutCAE(BaseCAE):
+    """
+    Simple Convolutional Autoencoder (CAE) with batch normalization and dropout in both the encoder and decoder.
+    """
+    def __init__(self, input_channels=3, dropout_rate=0.5):
+        super(SimpleBatchDropoutCAE, self).__init__()
+
+        # Encoder with Batch Normalization and Dropout
+        self.encoder = nn.Sequential(
+            nn.Conv2d(input_channels, 12, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(12),  # Batch normalization layer
+            nn.ReLU(),
+            nn.Dropout(dropout_rate),  # Dropout layer
+            nn.Conv2d(12, 24, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(24),  # Batch normalization layer
+            nn.ReLU(),
+        )
+
+        # Decoder with Batch Normalization and Dropout
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(24, 12, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(12),  # Batch normalization layer
+            nn.ReLU(),
+            nn.Dropout(dropout_rate),  # Dropout layer
+            nn.ConvTranspose2d(12, input_channels, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(input_channels),  # Batch normalization layer
+            nn.Sigmoid(),
+        )
+
 
 class SimpleCAE_Dropout(BaseCAE):
     """

@@ -4,9 +4,11 @@
 /data_old2
 /data_old
 /data_object_split
-/weights
+/weights_ae
+/weights_mlp
 *.code-workspace
 *.png
 *.txt
 /legacy
 /data_channels_test
+/fusion
