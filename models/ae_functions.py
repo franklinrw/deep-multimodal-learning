@@ -105,12 +105,12 @@ def train_autoencoder(model, loader, criterion, optimizer, is_depth=False, num_e
             # Add Gaussian noise if training a DCAE
             if add_noise:
                 noisy_images = add_gaussian_noise(images)
-                input_images = noisy_images
+                images = noisy_images
             else:
-                input_images = images
+                pass
 
             optimizer.zero_grad()
-            outputs = model.forward(input_images)
+            outputs = model.forward(images)
             loss = criterion(outputs, images)
 
             images_np = images.detach().cpu().numpy() 
@@ -180,7 +180,7 @@ def get_latent_dataset(model, loader, label=1, add_noise=False, is_depth=False, 
 
             # Add Gaussian noise if training a DCAE
             if add_noise:
-                noisy_images = add_gaussian_noise(images)
+                noisy_images = add_gaussian_noise(images, mean=0.2, std=0.3)
                 input_images = noisy_images
             else:
                 input_images = images

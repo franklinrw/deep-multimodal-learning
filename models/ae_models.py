@@ -81,60 +81,73 @@ class simpleBatchCAE(BaseCAE):
             nn.Sigmoid(),
         )
 
-class simpleBatchDropoutCAE(BaseCAE):
-    """
-    Simple Convolutional Autoencoder (CAE) with batch normalization and dropout in both the encoder and decoder.
-    """
-    def __init__(self, input_channels=3, dropout_rate=0.5):
-        super(simpleBatchDropoutCAE, self).__init__()
+class improvedCAE(BaseCAE):
+    def __init__(self, input_channels=3, dropout_rate=0.25):
+        super(improvedCAE, self).__init__()
 
         # Encoder with Batch Normalization and Dropout
         self.encoder = nn.Sequential(
-            nn.Conv2d(input_channels, 12, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(12),  # Batch normalization layer
+            nn.Conv2d(input_channels, 16, kernel_size=4, stride=2, padding=1),  # Adjusted kernel size
+            nn.BatchNorm2d(16),
             nn.ReLU(),
-            nn.Dropout(dropout_rate),  # Dropout layer
-            nn.Conv2d(12, 24, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(24),  # Batch normalization layer
+            nn.Dropout(dropout_rate),
+            nn.Conv2d(16, 32, kernel_size=4, stride=2, padding=1),  # Adjusted kernel size
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.Dropout(dropout_rate),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),  # Adjusted kernel size
+            nn.BatchNorm2d(64),
             nn.ReLU(),
         )
 
         # Decoder with Batch Normalization and Dropout
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(24, 12, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(12),  # Batch normalization layer
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),  # Adjusted kernel size
+            nn.BatchNorm2d(32),
             nn.ReLU(),
-            nn.Dropout(dropout_rate),  # Dropout layer
-            nn.ConvTranspose2d(12, input_channels, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(input_channels),  # Batch normalization layer
+            nn.ConvTranspose2d(32, 16, kernel_size=4, stride=2, padding=1),  # Adjusted kernel size
+            nn.BatchNorm2d(16),
+            nn.ReLU(),
+            nn.ConvTranspose2d(16, input_channels, kernel_size=4, stride=2, padding=1),  # Adjusted kernel size
+            nn.BatchNorm2d(input_channels),
             nn.Sigmoid(),
         )
 
-class CAEWithPooling(BaseCAE):
-    """
-    Convolutional Autoencoder (CAE) with max pooling and corresponding upsampling layers.
-    """
-    def __init__(self, input_channels=3):
-        super(CAEWithPooling, self).__init__()
 
-        # Encoder with Max Pooling
-        self.encoder = nn.Sequential(
-            nn.Conv2d(input_channels, 12, kernel_size=4, stride=2, padding=1),  # Output size: [12, x/2, y/2]
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),  # Output size: [12, x/4, y/4]
-            nn.Conv2d(12, 24, kernel_size=4, stride=2, padding=1),  # Output size: [24, x/8, y/8]
-            nn.ReLU(),
-            # No additional max pooling here to maintain symmetry with the decoder
-        )
+# class improvedCAE(BaseCAE):
+#     """
+#     Improved Convolutional Autoencoder (CAE) with batch normalization and dropout in both the encoder and decoder.
+#     """
+#     def __init__(self, input_channels=3, dropout_rate=0.25):
+#         super(improvedCAE, self).__init__()
 
-        # Decoder with Upsampling
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(24, 12, kernel_size=4, stride=2, padding=1),  # Upsample to [12, x/4, y/4]
-            nn.ReLU(),
-            nn.Upsample(scale_factor=2, mode='nearest'),  # Upsample to [12, x/2, y/2]
-            nn.ConvTranspose2d(12, input_channels, kernel_size=4, stride=2, padding=1),  # Upsample to [3, x, y]
-            nn.Sigmoid(),
-        )
+#         # Encoder with Batch Normalization and Dropout
+#         self.encoder = nn.Sequential(
+#             nn.Conv2d(input_channels, 16, kernel_size=3, stride=2, padding=1),
+#             nn.BatchNorm2d(16),  # Batch normalization layer
+#             nn.ReLU(),
+#             nn.Dropout(dropout_rate),  # Dropout layer
+#             nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=1),
+#             nn.BatchNorm2d(32),  # Batch normalization layer
+#             nn.ReLU(),
+#             nn.Dropout(dropout_rate),
+#             nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+#             nn.BatchNorm2d(64),
+#             nn.ReLU(),
+#         )
+
+#         # Decoder with Batch Normalization and Dropout
+#         self.decoder = nn.Sequential(
+#             nn.ConvTranspose2d(64, 32, kernel_size=3, stride=2, padding=1),
+#             nn.BatchNorm2d(32),  # Batch normalization layer
+#             nn.ReLU(),
+#             nn.ConvTranspose2d(32, 16, kernel_size=3, stride=2, padding=1),
+#             nn.BatchNorm2d(16),
+#             nn.ReLU(),
+#             nn.ConvTranspose2d(16, input_channels, kernel_size=3, stride=2, padding=1),
+#             nn.BatchNorm2d(input_channels),
+#             nn.Sigmoid(),
+#         )
 
 class DeepCAEWithPooling(BaseCAE):
     """
