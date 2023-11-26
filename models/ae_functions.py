@@ -137,7 +137,6 @@ def train_autoencoder(model, loader, criterion, optimizer, is_depth=False, num_e
 
     return model, epoch_loss_history
 
-
 def get_latent_dataset(model, loader, label=1, add_noise=False, is_depth=False, device="cuda"):
     """
     This function extracts features from the data using the encoder part of the autoencoder model.

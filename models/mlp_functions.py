@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 
-def train_mlp(model, loss_function, optimizer, train_loader, num_epochs, device="cuda"):
+def train_mlp(model, loss_function, optimizer, train_loader, num_epochs, label=1, device="cuda"):
     model.train() 
     for epoch in range(num_epochs):
         running_loss = 0.0
@@ -11,6 +11,8 @@ def train_mlp(model, loss_function, optimizer, train_loader, num_epochs, device=
         epoch_predictions = []
 
         for features, labels in train_loader:
+            if(type(labels) is list):
+                labels = labels[label]
             features, labels = features.to(device), labels.to(device)
 
             optimizer.zero_grad()
@@ -36,7 +38,7 @@ def train_mlp(model, loss_function, optimizer, train_loader, num_epochs, device=
     return model
 
 
-def validate_mlp(model, loss_function, val_loader, device):
+def validate_mlp(model, loss_function, val_loader, label=1, device="cuda"):
     model.eval()
     total_loss = 0.0
     total_samples = 0
@@ -46,6 +48,8 @@ def validate_mlp(model, loss_function, val_loader, device):
 
     with torch.no_grad():
         for features, labels in val_loader:
+            if(type(labels) is list):
+                labels = labels[label]
             features, labels = features.to(device), labels.to(device)
             outputs = model(features)
             loss = loss_function(outputs, labels)
