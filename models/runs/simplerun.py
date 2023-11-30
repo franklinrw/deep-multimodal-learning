@@ -39,9 +39,9 @@ sensor_right = "icub_right"
 sensor_depth = "depthcolormap"
 
 sensors = [sensor_color, sensor_left, sensor_right, sensor_depth]
-batch_sizes = [4, 8, 16, 32]
+batch_sizes = [4, 8, 16]
 num_epochs = [3]
-lr_rates = [1e-2, 1e-3, 1e-4]
+lr_rates = [1e-2, 1e-3]
 dcae = False
 
 for sensor in sensors:
@@ -86,7 +86,8 @@ for sensor in sensors:
                                                                 test_loader,\
                                                                 cae_lossfunction,\
                                                                 is_depth = False,\
-                                                                device = DEVICE)
+                                                                device = DEVICE,\
+                                                                save_dir=save_path)
 
                 # Save the model weights
                 model_path = "C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/weights_ae/"

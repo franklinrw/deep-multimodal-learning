@@ -11,7 +11,7 @@ from functions import get_loader, CustomSampler
 import os
 import pandas as pd
 
-def validate_cae(cae, loader, lossfunction, is_depth = False, device="cuda"):
+def validate_cae(cae, loader, lossfunction, is_depth = False, device="cuda", save_dir=None):
     """
     This function evaluates a convolutional autoencoder (CAE) on the validation set.
 
@@ -78,6 +78,15 @@ def validate_cae(cae, loader, lossfunction, is_depth = False, device="cuda"):
     avg_ssim = sum(ssim_list) / len(ssim_list)
     print("Average SSIM:", avg_ssim)
 
+    # Create a DataFrame
+    df = pd.DataFrame({
+        'avg_val_loss': avg_val_loss,
+        'avg_val_psnr': avg_psnr,
+        'avg_val_ssim': avg_ssim
+    })
+
+    df.to_csv(os.path.join(save_dir, "val_history.csv"))
+
     return avg_val_loss, avg_psnr, avg_ssim
 
 
@@ -141,7 +150,8 @@ def train_autoencoder(model, loader, criterion, optimizer, is_depth=False, num_e
         print(f"Epoch [{epoch+1}/{num_epochs}], AVG Loss: {avg_loss:.4f}, AVG PSNR: {avg_psnr:.4f}, AVG SSIM: {avg_ssim:.4f}")
 
         if save_dir is not None:
-            visualize_reconstruction(model, loader, num_samples=2, depth=is_depth, device=device, save_dir=save_dir)
+            save_path = os.path.join(save_dir, f"epoch_{epoch+1}.png")
+            visualize_reconstruction(model, loader, num_samples=2, depth=is_depth, device=device, save_dir=save_path)
 
     # Create a DataFrame
     df = pd.DataFrame({
@@ -150,7 +160,7 @@ def train_autoencoder(model, loader, criterion, optimizer, is_depth=False, num_e
         'avg_ssim_history': avg_ssim_history
     })
 
-    df.to_csv(os.path.join(save_dir, "history.csv"))
+    df.to_csv(os.path.join(save_dir, "train_history.csv"))
 
     return model, epoch_loss_history, avg_psnr_history, avg_ssim_history
 
