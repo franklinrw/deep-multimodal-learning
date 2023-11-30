@@ -4,9 +4,9 @@ sys.path.insert(0, '../')
 # Import the necessary packages
 import torch
 import torch.nn as nn
-from functions import get_loader, plot_histories, plot_history
+from functions import get_loader
 
-from ae_functions import train_autoencoder, validate_cae, visualize_latent_space, visualize_reconstruction, get_latent_dataset
+from ae_functions import train_autoencoder, validate_cae
 from ae_models import simpleCAE
 
 # Check if CUDA is available
