@@ -1,4 +1,5 @@
 import sys
+import os
 sys.path.insert(0, '../')
 
 # Import the necessary packages
@@ -40,7 +41,7 @@ sensor_depth = "depthcolormap"
 sensors = [sensor_color, sensor_left, sensor_right, sensor_depth]
 batch_sizes = [4, 8, 16, 32]
 num_epochs = [3]
-lr_rates = [1e-2, 1e-3, 1e-4, 1e-5]
+lr_rates = [1e-2, 1e-3, 1e-4]
 dcae = False
 
 for sensor in sensors:
@@ -67,6 +68,8 @@ for sensor in sensors:
                 # Define the optimizer
                 optimizer= torch.optim.Adam(cae.parameters(), lr=LR_RATE)
 
+                save_path = f"C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/models/runs/results/simple/{SENSOR}_B{BATCH_SIZE}_NE{NUM_EPOCHS}_LR{LR_RATE}/"
+                os.makedirs(save_path, exist_ok=True)
                 # Train the model
                 trained_cae, cae_epoch_loss_history, avg_psnr_history, avg_ssim_history = train_autoencoder(cae,\
                                                                 train_loader,\
@@ -75,7 +78,8 @@ for sensor in sensors:
                                                                 is_depth=False,\
                                                                 num_epochs=NUM_EPOCHS,\
                                                                 add_noise=dcae,\
-                                                                device=DEVICE)
+                                                                device=DEVICE,\
+                                                                save_dir=save_path)
 
                 # Validate the model
                 avg_val_loss, avg_psnr, avg_ssim = validate_cae(trained_cae,\
@@ -88,49 +92,3 @@ for sensor in sensors:
                 model_path = "C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/weights_ae/"
                 weight_name = f"simple/simple_cae_ne{NUM_EPOCHS}_b{BATCH_SIZE}_{SENSOR}.pth"
                 torch.save(trained_cae.state_dict(), model_path+weight_name)
-
-for sensor_color in sensors:
-    # Define the hyperparameters
-    SENSOR = sensor_color
-    BATCH_SIZE = 8
-    NUM_EPOCHS = 5
-    LR_RATE = 1e-3
-
-    # Define the loaders
-    train_loader = get_loader(BASE_PATH, OBJECTS, TOOL_NAMES, ACTIONS, sensor_color, "training", batch_size=BATCH_SIZE)
-    val_loader = get_loader(BASE_PATH, OBJECTS, TOOL_NAMES, ACTIONS, sensor_color, "validation", batch_size=BATCH_SIZE)
-    test_loader = get_loader(BASE_PATH, OBJECTS, TOOL_NAMES, ACTIONS, sensor_color, "testing", batch_size=BATCH_SIZE)
-
-    # cae_lossfunction = nn.MSELoss()
-    cae_lossfunction = nn.BCELoss()
-
-    # Define the model
-    cae = simpleCAE(input_channels=3).to(DEVICE)
-
-    # Define the optimizer
-    optimizer= torch.optim.Adam(cae.parameters(), lr=LR_RATE)
-    # optimizer = torch.optim.SGD(cae.parameters(), lr=LR_RATE, momentum=0.9)
-    # optimizer = torch.optim.AdamW(cae.parameters(), lr=LR_RATE, weight_decay=1e-2)
-
-    # Train the model
-    trained_cae, cae_epoch_loss_history, avg_psnr_history, avg_ssim_history = train_autoencoder(cae,\
-                                                            train_loader,\
-                                                            cae_lossfunction,\
-                                                            optimizer,\
-                                                            is_depth=False,\
-                                                            num_epochs=NUM_EPOCHS,\
-                                                            add_noise=True,\
-                                                            device=DEVICE,\
-                                                            visualize=False)
-
-    # Validate the model
-    avg_val_loss, avg_psnr, avg_ssim = validate_cae(trained_cae,\
-                                                            test_loader,\
-                                                            cae_lossfunction,\
-                                                            is_depth = False,\
-                                                            device = DEVICE)
-
-    # Save the model weights
-    model_path = "C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/weights_ae/"
-    weight_name = f"simple/simple_dcae_ne{NUM_EPOCHS}_b{BATCH_SIZE}_{SENSOR}.pth"
-    torch.save(trained_cae.state_dict(), model_path+weight_name)
