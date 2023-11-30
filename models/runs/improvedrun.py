@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from functions import get_loader
 
-from ae_functions import train_autoencoder, validate_cae
+from ae_functions import train_autoencoder, validate_cae, visualize_reconstruction, visualize_latent_space
 from ae_models import improvedCAE
 
 # Check if CUDA is available
@@ -93,3 +93,10 @@ for sensor in sensors:
                 model_path = "C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/weights_ae/"
                 weight_name = f"improved/improved_cae_ne{NUM_EPOCHS}_b{BATCH_SIZE}_{SENSOR}.pth"
                 torch.save(trained_cae.state_dict(), model_path+weight_name)
+
+                save_path_recon = os.path.join(save_path, f"test_recon.png")
+                visualize_reconstruction(trained_cae, test_loader, num_samples=2, save_dir=save_path_recon)
+                save_path_latent_train = os.path.join(save_path, f"train_latent.png")
+                visualize_latent_space(trained_cae, train_loader, n_components=2, save_dir=save_path_latent_train)
+                save_path_latent_test = os.path.join(save_path, f"test_latent.png")
+                visualize_latent_space(trained_cae, test_loader, n_components=2, save_dir=save_path_latent_test)
