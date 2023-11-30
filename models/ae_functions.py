@@ -8,7 +8,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from skimage.metrics import peak_signal_noise_ratio as psnr
 from skimage.metrics import structural_similarity as ssim
 from functions import get_loader, CustomSampler
-
+import os
+import pandas as pd
 
 def validate_cae(cae, loader, lossfunction, is_depth = False, device="cuda"):
     """
@@ -21,6 +22,8 @@ def validate_cae(cae, loader, lossfunction, is_depth = False, device="cuda"):
 
     Returns:
     float: The average validation loss over all batches in the validation set.
+    float: The average PSNR over all batches in the validation set.
+    float: The average SSIM over all batches in the validation set.
     """
     # Define the loss function as Mean Squared Error Loss. It's common for reconstruction tasks.
 
@@ -75,14 +78,16 @@ def validate_cae(cae, loader, lossfunction, is_depth = False, device="cuda"):
     avg_ssim = sum(ssim_list) / len(ssim_list)
     print("Average SSIM:", avg_ssim)
 
-    return avg_val_loss, validation_loss_history
+    return avg_val_loss, avg_psnr, avg_ssim
 
 
-def train_autoencoder(model, loader, criterion, optimizer, is_depth=False, num_epochs=5, add_noise=False, device="cuda", visualize=False):
+def train_autoencoder(model, loader, criterion, optimizer, is_depth=False, num_epochs=5, add_noise=False, device="cuda", save_dir=None):
 
     model.train()
 
     epoch_loss_history = []
+    avg_psnr_history = []
+    avg_ssim_history = []
 
     for epoch in range(num_epochs):
         batch_loss_history = []
@@ -102,22 +107,22 @@ def train_autoencoder(model, loader, criterion, optimizer, is_depth=False, num_e
                 images = images.permute(0, 3, 1, 2)
                 #print("shape color image after permute:", images.shape)
 
+            optimizer.zero_grad()
+            outputs = 0
             # Add Gaussian noise if training a DCAE
             if add_noise:
-                noisy_images = add_gaussian_noise(images)
-                images = noisy_images
+                noisy_images = add_gaussian_noise(images, mean=0.1, std=0.4)
+                outputs = model.forward(noisy_images)
             else:
-                pass
+                outputs = model.forward(images)
 
-            optimizer.zero_grad()
-            outputs = model.forward(images)
             loss = criterion(outputs, images)
 
             images_np = images.detach().cpu().numpy() 
             outputs_np = outputs.detach().cpu().numpy()
 
             batch_psnr = psnr(images_np, outputs_np, data_range=images_np.max() - images_np.min())
-            batch_ssim = ssim(images_np, outputs_np, win_size=3, multichannel=False, data_range=images_np.max() - images_np.min())
+            batch_ssim = ssim(images_np, outputs_np, win_size=3, multichannel=True, data_range=images_np.max() - images_np.min())
             psnr_list.append(batch_psnr)
             ssim_list.append(batch_ssim)
 
@@ -130,12 +135,26 @@ def train_autoencoder(model, loader, criterion, optimizer, is_depth=False, num_e
         avg_ssim = sum(ssim_list) / len(ssim_list)
 
         epoch_loss_history.append(avg_loss)
+        avg_psnr_history.append(avg_psnr)
+        avg_ssim_history.append(avg_ssim)
+
         print(f"Epoch [{epoch+1}/{num_epochs}], AVG Loss: {avg_loss:.4f}, AVG PSNR: {avg_psnr:.4f}, AVG SSIM: {avg_ssim:.4f}")
 
-        if visualize:
-            visualize_reconstruction(model, loader, num_samples=2, depth=is_depth, device=device)
+        if save_dir is not None:
+            save_path = os.path.join(save_dir, f"epoch_{epoch+1}")
+            visualize_reconstruction(model, loader, num_samples=2, depth=is_depth, device=device, save_dir=save_path)
 
-    return model, epoch_loss_history
+    # Create a DataFrame
+    df = pd.DataFrame({
+        'loss_history': epoch_loss_history,
+        'avg_psnr_history': avg_psnr_history,
+        'avg_ssim_history': avg_ssim_history
+    })
+
+    df.to_csv(os.path.join(save_dir, "history.csv"))
+
+    return model, epoch_loss_history, avg_psnr_history, avg_ssim_history
+
 
 def get_latent_dataset(model, loader, label=1, add_noise=False, is_depth=False, device="cuda"):
     """
@@ -216,7 +235,7 @@ def get_latent_dataloader(cae_model, base_path, objects, tool_names, actions, se
     return torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, sampler=sampler)
 
 
-def visualize_reconstruction(model, test_loader, num_samples=5, depth=False, device='cuda'):
+def visualize_reconstruction(model, test_loader, num_samples=2, depth=False, device='cuda', save_dir=None):
     """
     Visualize the original and reconstructed images from the test set.
     
@@ -225,6 +244,7 @@ def visualize_reconstruction(model, test_loader, num_samples=5, depth=False, dev
     - test_loader: DataLoader for the test set.
     - num_samples: Number of samples to visualize.
     - device: The device to use ('cuda' or 'cpu').
+    - save_dir: The directory to save the images to. If None, the images will not be saved.
     """
     model.eval()  # Set the model to evaluation mode
     with torch.no_grad():
@@ -264,7 +284,11 @@ def visualize_reconstruction(model, test_loader, num_samples=5, depth=False, dev
             ax.axis('off')
         
         plt.tight_layout()
-        plt.show()
+        # Save the images if save_dir is specified
+        if save_dir is not None:
+            os.makedirs(save_dir, exist_ok=True)
+            # save_path = os.path.join(save_dir, f"reconstructions.png")
+            plt.savefig(save_dir)
 
 
 def collect_latent_vectors(model, loader, is_depth=False, device="cuda"):
