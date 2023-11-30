@@ -80,9 +80,9 @@ def validate_cae(cae, loader, lossfunction, is_depth = False, device="cuda", sav
 
     # Create a DataFrame
     df = pd.DataFrame({
-        'avg_val_loss': avg_val_loss,
-        'avg_val_psnr': avg_psnr,
-        'avg_val_ssim': avg_ssim
+        'avg_val_loss': validation_loss_history,
+        'avg_val_psnr': psnr_list,
+        'avg_val_ssim': ssim_list
     })
 
     df.to_csv(os.path.join(save_dir, "val_history.csv"))
@@ -296,6 +296,7 @@ def visualize_reconstruction(model, test_loader, num_samples=2, depth=False, dev
         # Save the images if save_dir is specified
         if save_dir is not None:
             plt.savefig(save_dir)
+        plt.close()
 
 
 def collect_latent_vectors(model, loader, is_depth=False, device="cuda"):
@@ -319,7 +320,7 @@ def collect_latent_vectors(model, loader, is_depth=False, device="cuda"):
     return np.concatenate(latent_vectors)
 
 
-def visualize_latent_space(model, data_loader, is_depth=False, n_components=2, random_state=42):
+def visualize_latent_space(model, data_loader, is_depth=False, n_components=2, random_state=42, save_dir=None):
     """
     Visualize the latent space of an autoencoder using t-SNE.
     
@@ -343,7 +344,8 @@ def visualize_latent_space(model, data_loader, is_depth=False, n_components=2, r
         plt.xlabel('Component 1')
         plt.ylabel('Component 2')
         plt.title('2D Visualization of Latent Space')
-        plt.show()
+        plt.savefig(save_dir)
+        plt.close()
     
     # 3D Visualization
     elif n_components == 3:
@@ -354,7 +356,8 @@ def visualize_latent_space(model, data_loader, is_depth=False, n_components=2, r
         ax.set_ylabel('Component 2')
         ax.set_zlabel('Component 3')
         plt.title('3D Visualization of Latent Space')
-        plt.show()
+        plt.savefig(save_dir)
+        plt.close()
     
     else:
         raise ValueError("n_components must be either 2 or 3.")

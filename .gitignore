@@ -12,4 +12,4 @@
 /legacy
 /data_channels_test
 /fusion
-/runs/results/
+models/runs/results
