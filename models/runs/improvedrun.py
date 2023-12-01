@@ -70,6 +70,7 @@ for sensor in sensors:
 
                 save_path = f"C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/models/runs/results/improved/{SENSOR}_B{BATCH_SIZE}_NE{NUM_EPOCHS}_LR{LR_RATE}/"
                 os.makedirs(save_path, exist_ok=True)
+                
                 # Train the model
                 trained_cae, cae_epoch_loss_history, avg_psnr_history, avg_ssim_history = train_autoencoder(cae,\
                                                                 train_loader,\

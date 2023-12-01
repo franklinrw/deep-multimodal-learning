@@ -48,22 +48,22 @@ class simpleMLP(nn.Module):
 
         return x
     
-class ImprovedMLP(nn.Module):
+class improvedMLP(nn.Module):
     def __init__(self, input_dim, output_dim):
-        super(ImprovedMLP, self).__init__()
+        super(improvedMLP, self).__init__()
 
         # Increasing the number of layers and introducing dropout for regularization
         self.fc1 = nn.Linear(input_dim, 1024)  # First layer with more neurons
         self.relu1 = nn.ReLU()
-        #self.dropout1 = nn.Dropout(0.5)  # Dropout layer for regularization
+        self.dropout1 = nn.Dropout(0.25)  # Dropout layer for regularization
 
         self.fc2 = nn.Linear(1024, 512)  # Additional intermediate layer
         self.relu2 = nn.ReLU()
-        #self.dropout2 = nn.Dropout(0.5)
+        self.dropout2 = nn.Dropout(0.25)
 
         self.fc3 = nn.Linear(512, 256)  # Further reduction in dimension
         self.relu3 = nn.ReLU()
-        #self.dropout3 = nn.Dropout(0.5)
+        self.dropout3 = nn.Dropout(0.25)
 
         self.fc4 = nn.Linear(256, output_dim)  # Final layer for class scores
 
