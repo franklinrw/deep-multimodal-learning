@@ -39,9 +39,9 @@ sensor_right = "icub_right"
 sensor_depth = "depthcolormap"
 
 sensors = [sensor_color, sensor_left, sensor_right, sensor_depth]
-batch_sizes = [4, 8, 16]
-num_epochs = [3]
-lr_rates = [1e-2, 1e-3]
+batch_sizes = [8]
+num_epochs = [8]
+lr_rates = [1e-3]
 dcae = False
 
 for sensor in sensors:
@@ -68,7 +68,7 @@ for sensor in sensors:
                 # Define the optimizer
                 optimizer= torch.optim.Adam(cae.parameters(), lr=LR_RATE)
 
-                save_path = f"C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/models/runs/results/improved/{SENSOR}_B{BATCH_SIZE}_NE{NUM_EPOCHS}_LR{LR_RATE}/"
+                save_path = f"C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/models/runs/results/improvedCAE/{SENSOR}_B{BATCH_SIZE}_NE{NUM_EPOCHS}_LR{LR_RATE}/"
                 os.makedirs(save_path, exist_ok=True)
                 
                 # Train the model

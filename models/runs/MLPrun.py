@@ -39,8 +39,8 @@ sensor_left = "icub_left"
 sensor_right = "icub_right"
 sensor_depth = "depthcolormap"
 
-sensors = [sensor_color, sensor_left, sensor_right, sensor_depth]
-batch_sizes = [4, 8, 16]
+sensors = [sensor_color, sensor_left, sensor_right]
+batch_sizes = [8]
 num_epochs = [3]
 lr_rates = [1e-3]
 dcae = False
@@ -61,7 +61,7 @@ for sensor in sensors:
                 test_loader = get_loader(BASE_PATH, OBJECTS, TOOL_NAMES, ACTIONS, SENSOR, "testing", batch_size=BATCH_SIZE)
 
                 model_path = "C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/weights_ae/"
-                cae_name = f"improved/improved_cae_ne3_b{batch_size}_{sensor}.pth"
+                cae_name = f"improved/improved_cae_ne5_b{batch_size}_{sensor}.pth"
                 trained_cae = improvedCAE().to(DEVICE)
                 trained_cae.load_state_dict(torch.load(model_path+cae_name))
 
@@ -70,8 +70,8 @@ for sensor in sensors:
                 output_dim = 4 
 
                 # Extract features from the train and validation sets
-                train_dataset = get_latent_dataset(trained_cae, train_loader, label=1, add_noise=False, is_depth=False, device=DEVICE)
-                val_dataset = get_latent_dataset(trained_cae, val_loader, label=1, add_noise=False, is_depth=False, device=DEVICE)
+                train_dataset = get_latent_dataset(trained_cae, train_loader, label=0, add_noise=False, is_depth=False, device=DEVICE)
+                val_dataset = get_latent_dataset(trained_cae, val_loader, label=0, add_noise=False, is_depth=False, device=DEVICE)
 
                 # Create DataLoaders for the extracted features
                 mlp_train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
@@ -82,7 +82,7 @@ for sensor in sensors:
                 mlp = improvedMLP(input_dim, output_dim).to(DEVICE)
                 mlp_optimizer = torch.optim.Adam(mlp.parameters(), lr=LR_RATE)
 
-                save_path = f"C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/models/runs/results/improvedCAEimprovedMLP/{SENSOR}_B{BATCH_SIZE}_NE{NUM_EPOCHS}_LR{LR_RATE}/"
+                save_path = f"C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/models/runs/results/improvedCAEimprovedMLPTool/{SENSOR}_B{BATCH_SIZE}_NE{NUM_EPOCHS}_LR{LR_RATE}/"
                 os.makedirs(save_path, exist_ok=True)
 
                 # Train the model
@@ -92,5 +92,5 @@ for sensor in sensors:
                 validate_mlp(trained_mlp, mlp_lossfunction, mlp_val_loader, DEVICE, save_dir=save_path)
 
                 model_path = "C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/weights_mlp/"
-                weight_name = f"simple/improved_mlp_improved_cae_ne3_b{batch_size}_{sensor}_action.pth"
+                weight_name = f"simple/improved_mlp_improved_cae_ne3_b{batch_size}_{sensor}_tool.pth"
                 torch.save(trained_mlp.state_dict(), model_path+weight_name)
