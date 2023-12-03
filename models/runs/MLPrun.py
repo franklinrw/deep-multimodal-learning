@@ -39,7 +39,7 @@ sensor_left = "icub_left"
 sensor_right = "icub_right"
 sensor_depth = "depthcolormap"
 
-sensors = [sensor_color, sensor_left, sensor_right]
+sensors = [sensor_color]
 batch_sizes = [8]
 num_epochs = [3]
 lr_rates = [1e-3]
@@ -61,7 +61,7 @@ for sensor in sensors:
                 test_loader = get_loader(BASE_PATH, OBJECTS, TOOL_NAMES, ACTIONS, SENSOR, "testing", batch_size=BATCH_SIZE)
 
                 model_path = "C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/weights_ae/"
-                cae_name = f"improved/improved_cae_ne5_b{batch_size}_{sensor}.pth"
+                cae_name = f"improved/improved_cae_ne3_b{batch_size}_{sensor}.pth"
                 trained_cae = improvedCAE().to(DEVICE)
                 trained_cae.load_state_dict(torch.load(model_path+cae_name))
 
@@ -70,8 +70,8 @@ for sensor in sensors:
                 output_dim = 4 
 
                 # Extract features from the train and validation sets
-                train_dataset = get_latent_dataset(trained_cae, train_loader, label=1, add_noise=False, is_depth=False, device=DEVICE)
-                val_dataset = get_latent_dataset(trained_cae, val_loader, label=1, add_noise=False, is_depth=False, device=DEVICE)
+                train_dataset = get_latent_dataset(trained_cae, train_loader, label=0, add_noise=False, is_depth=False, device=DEVICE)
+                val_dataset = get_latent_dataset(trained_cae, val_loader, label=0, add_noise=False, is_depth=False, device=DEVICE)
 
                 # Create DataLoaders for the extracted features
                 mlp_train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
