@@ -38,11 +38,11 @@ sensor_left = "icub_left"
 sensor_right = "icub_right"
 sensor_depth = "depthcolormap"
 
-sensors = [sensor_color, sensor_left, sensor_right, sensor_depth]
+sensors = [sensor_color, sensor_left, sensor_right]
 batch_sizes = [8]
-num_epochs = [8]
+num_epochs = [6]
 lr_rates = [1e-3]
-dcae = False
+dcae = True
 
 for sensor in sensors:
     for batch_size in batch_sizes:
@@ -68,7 +68,7 @@ for sensor in sensors:
                 # Define the optimizer
                 optimizer= torch.optim.Adam(cae.parameters(), lr=LR_RATE)
 
-                save_path = f"C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/models/runs/results/improvedCAE/{SENSOR}_B{BATCH_SIZE}_NE{NUM_EPOCHS}_LR{LR_RATE}/"
+                save_path = f"C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/models/runs/results/improvedCAE/{SENSOR}_B{BATCH_SIZE}_NE{NUM_EPOCHS}_LR{LR_RATE}_Noise/"
                 os.makedirs(save_path, exist_ok=True)
                 
                 # Train the model
@@ -84,7 +84,7 @@ for sensor in sensors:
 
                 # Validate the model
                 avg_val_loss, avg_psnr, avg_ssim = validate_cae(trained_cae,\
-                                                                test_loader,\
+                                                                val_loader,\
                                                                 cae_lossfunction,\
                                                                 is_depth = False,\
                                                                 device = DEVICE,\
@@ -92,7 +92,7 @@ for sensor in sensors:
 
                 # Save the model weights
                 model_path = "C:/Users/Frank/OneDrive/Bureaublad/ARC/deep-multimodal-learning/weights_ae/"
-                weight_name = f"improved/improved_cae_ne{NUM_EPOCHS}_b{BATCH_SIZE}_{SENSOR}.pth"
+                weight_name = f"improved/improved_cae_ne{NUM_EPOCHS}_b{BATCH_SIZE}_{SENSOR}_noise.pth"
                 torch.save(trained_cae.state_dict(), model_path+weight_name)
 
                 save_path_recon = os.path.join(save_path, f"test_recon.png")

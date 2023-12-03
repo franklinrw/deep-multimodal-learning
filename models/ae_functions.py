@@ -11,7 +11,7 @@ from functions import get_loader, CustomSampler
 import os
 import pandas as pd
 
-def validate_cae(cae, loader, lossfunction, is_depth = False, device="cuda", save_dir=None):
+def validate_cae(cae, loader, lossfunction, is_depth = False, device="cuda", add_noise=False, save_dir=None):
     """
     This function evaluates a convolutional autoencoder (CAE) on the validation set.
 
@@ -50,8 +50,13 @@ def validate_cae(cae, loader, lossfunction, is_depth = False, device="cuda", sav
                 images = images.permute(0, 3, 1, 2)
                 #print("shape color image after permute:", images.shape)
 
-            # Forward pass: pass the images through the model to get the reconstructed images.
-            outputs = cae.forward(images)
+            outputs = 0
+            # Add Gaussian noise if training a DCAE
+            if add_noise:
+                noisy_images = add_gaussian_noise(images)
+                outputs = cae.forward(noisy_images)
+            else:
+                outputs = cae.forward(images)
 
             # Calculate the loss between the original and the reconstructed images.
             loss = lossfunction(outputs, images)
@@ -120,7 +125,7 @@ def train_autoencoder(model, loader, criterion, optimizer, is_depth=False, num_e
             outputs = 0
             # Add Gaussian noise if training a DCAE
             if add_noise:
-                noisy_images = add_gaussian_noise(images, mean=0.1, std=0.4)
+                noisy_images = add_gaussian_noise(images)
                 outputs = model.forward(noisy_images)
             else:
                 outputs = model.forward(images)
@@ -208,7 +213,7 @@ def get_latent_dataset(model, loader, label=1, add_noise=False, is_depth=False, 
 
             # Add Gaussian noise if training a DCAE
             if add_noise:
-                noisy_images = add_gaussian_noise(images, mean=0.2, std=0.3)
+                noisy_images = add_gaussian_noise(images)
                 input_images = noisy_images
             else:
                 input_images = images
@@ -363,7 +368,7 @@ def visualize_latent_space(model, data_loader, is_depth=False, n_components=2, r
         raise ValueError("n_components must be either 2 or 3.")
     
     
-def add_gaussian_noise(images, mean=0., std=0.1):
+def add_gaussian_noise(images, mean=0.1, std=0.4):
     """
     Adds Gaussian noise to the input images.
 

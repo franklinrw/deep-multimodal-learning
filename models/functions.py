@@ -87,6 +87,7 @@ def get_datasets(base_path, objectnames, toolnames, actions, sensor, set_name):
                 dataset = CustomDataset(file_path=path)
                 datasets.append(dataset)
 
+
     # Return a ConcatDataset instance comprising all the datasets
     return ConcatDataset(datasets)
 
@@ -103,6 +104,7 @@ def load_pretrained_cae(model_class, model_path, weight_name, device):
     model.load_state_dict(torch.load(model_path + weight_name))
     model.eval()
     return model
+
 
 def load_pretrained_mlp(model_class, model_path, weight_name, device, input_dim, output_dim):
     model = model_class(input_dim, output_dim).to(device)
@@ -128,6 +130,31 @@ def average_fusion_predictions(model_predictions):
 
     for i in range(num_batches):
         avg_prediction = sum(model_predictions[j][i] for j in range(num_models)) / num_models
+        final_predictions.append(avg_prediction)
+
+    return final_predictions
+
+
+def weighted_average_fusion_predictions(model_predictions, model_weights):
+    """
+    Perform weighted average fusion of predictions from multiple models.
+    
+    Parameters:
+    model_predictions (list): List of lists, each containing model predictions for each batch.
+    model_weights (list): List of weights for each model. Length should match number of models.
+
+    Returns:
+    final_predictions (list): Weighted average predictions for each batch.
+    """
+    assert len(model_predictions) == len(model_weights), "Number of models and weights must match"
+    
+    final_predictions = []
+    num_batches = len(model_predictions[0])
+
+    for i in range(num_batches):
+        weighted_sum = sum(model_predictions[j][i] * model_weights[j] for j in range(len(model_weights)))
+        total_weight = sum(model_weights)
+        avg_prediction = weighted_sum / total_weight
         final_predictions.append(avg_prediction)
 
     return final_predictions
