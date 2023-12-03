@@ -70,8 +70,8 @@ for sensor in sensors:
                 output_dim = 4 
 
                 # Extract features from the train and validation sets
-                train_dataset = get_latent_dataset(trained_cae, train_loader, label=0, add_noise=False, is_depth=False, device=DEVICE)
-                val_dataset = get_latent_dataset(trained_cae, val_loader, label=0, add_noise=False, is_depth=False, device=DEVICE)
+                train_dataset = get_latent_dataset(trained_cae, train_loader, label=1, add_noise=False, is_depth=False, device=DEVICE)
+                val_dataset = get_latent_dataset(trained_cae, val_loader, label=1, add_noise=False, is_depth=False, device=DEVICE)
 
                 # Create DataLoaders for the extracted features
                 mlp_train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
