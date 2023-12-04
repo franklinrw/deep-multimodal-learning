@@ -43,8 +43,8 @@ class simpleMLP(nn.Module):
     def forward(self, x):
         # Apply layer by layer transformations
         x = F.relu(self.fc1(x))  # ReLU activation for non-linearity
-        x = F.relu(self.fc2(x))  # ReLU activation for non-linearity
-        x = self.fc3(x)  # The network's output are the class scores
+        x = F.relu(self.fc2(x)) 
+        x = self.fc3(x)  
 
         return x
     
