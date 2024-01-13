@@ -42,7 +42,7 @@ sensors = [sensor_color, sensor_left, sensor_right]
 batch_sizes = [8]
 num_epochs = [6]
 lr_rates = [1e-3]
-dcae = True
+dcae = False
 
 for sensor in sensors:
     for batch_size in batch_sizes:

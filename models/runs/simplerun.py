@@ -39,9 +39,9 @@ sensor_right = "icub_right"
 sensor_depth = "depthcolormap"
 
 sensors = [sensor_color, sensor_left, sensor_right, sensor_depth]
-batch_sizes = [8, 16]
+batch_sizes = [8]
 num_epochs = [3]
-lr_rates = [1e-2, 1e-3]
+lr_rates = [1e-3]
 dcae = False
 
 for sensor in sensors:
