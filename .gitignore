@@ -9,8 +9,6 @@
 *.code-workspace
 *.png
 *.txt
-/legacy
 /data_channels_test
 /fusion
 models/runs/results
-/weights
